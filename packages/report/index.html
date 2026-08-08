@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>expo-bisect report</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Both build outputs are the same HTML: the node side string-replaces these
+         two placeholder tokens, so there is exactly one app bundle to maintain. -->
+    <script id="expo-bisect-config" type="application/json">"__EXPO_BISECT_CONFIG__"</script>
+    <script id="expo-bisect-events" type="application/json">"__EXPO_BISECT_EVENTS__"</script>
+    <!-- url -> data: URI for captured frames, emitted once each -->
+    <script id="expo-bisect-frames" type="application/json">"__EXPO_BISECT_FRAMES__"</script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "index": 0,
+  "session_id": "11111111-1111-4111-8111-111111111111",
+  "workflow_run_id": "22222222-2222-4222-8222-222222222222",
+  "trace_id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "worker_base_url": "https://cog-ios-slot-1-example.revyl.ai",
+  "viewer_url": "https://app.revyl.ai/sessions/11111111-1111-4111-8111-111111111111",
+  "whep_url": "https://revyl-realtime-bridge.revyl.workers.dev/play/bbbbbbbbbbbbbbbb",
+  "platform": "ios",
+  "screen_width": 393,
+  "screen_height": 852,
+  "started_at": "2026-08-07T16:28:27.17559-07:00",
+  "last_activity": "2026-08-07T16:28:27.17559-07:00",
+  "idle_timeout": 900000000000
+}

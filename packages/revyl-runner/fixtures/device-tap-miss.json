@@ -1,0 +1,8 @@
+{
+  "action": "tap",
+  "x": 158,
+  "y": 291,
+  "target": "a button that definitely does not exist ZZZQQQ",
+  "success": true,
+  "latency_ms": 4377.4773753248155
+}

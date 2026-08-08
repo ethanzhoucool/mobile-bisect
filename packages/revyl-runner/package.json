@@ -1,0 +1,36 @@
+{
+  "name": "@expo-bisect/revyl-runner",
+  "version": "0.1.0",
+  "description": "MobileRuntimeRunner backed by the Revyl CLI — drives a cloud device through a flow and returns a verdict.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "keywords": [
+    "expo-bisect",
+    "revyl",
+    "cloud-devices",
+    "e2e"
+  ],
+  "dependencies": {
+    "@expo-bisect/core": "*"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

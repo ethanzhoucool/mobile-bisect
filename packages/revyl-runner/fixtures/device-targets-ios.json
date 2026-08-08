@@ -1,0 +1,48 @@
+{
+  "ios": [
+    {
+      "Model": "iPhone 17 Pro Max",
+      "Runtime": "iOS 26.5"
+    },
+    {
+      "Model": "iPhone 17 Pro Max",
+      "Runtime": "iOS 26.2"
+    },
+    {
+      "Model": "iPhone Air",
+      "Runtime": "iOS 26.5"
+    },
+    {
+      "Model": "iPhone Air",
+      "Runtime": "iOS 26.2"
+    },
+    {
+      "Model": "iPhone 15",
+      "Runtime": "iOS 18.5"
+    },
+    {
+      "Model": "iPhone 15",
+      "Runtime": "iOS 26.2"
+    },
+    {
+      "Model": "iPhone 16",
+      "Runtime": "iOS 26.5"
+    },
+    {
+      "Model": "iPhone 16",
+      "Runtime": "iOS 18.5"
+    },
+    {
+      "Model": "iPhone 16",
+      "Runtime": "iOS 26.2"
+    },
+    {
+      "Model": "iPad Pro 13-inch (M4)",
+      "Runtime": "iOS 18.5"
+    },
+    {
+      "Model": "iPad Pro 13-inch (M4)",
+      "Runtime": "iOS 26.2"
+    }
+  ]
+}

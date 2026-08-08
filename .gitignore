@@ -1,0 +1,21 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Run output — every bisect writes here
+.expo-bisect/
+
+# The demo app carries its own 64-commit history as a nested repo
+examples/orbit-store/
+
+# Build artifacts
+*.app
+*.app.zip
+*.ipa
+
+# Local screenshots captured while checking the report UI
+packages/report/.screenshots/
+
+.DS_Store
+.env
+.env.*

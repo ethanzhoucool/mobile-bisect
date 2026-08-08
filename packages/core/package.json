@@ -1,0 +1,27 @@
+{
+  "name": "@expo-bisect/core",
+  "version": "0.1.0",
+  "description": "Bisection state machine, run store, and diagnostics for expo-bisect.",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

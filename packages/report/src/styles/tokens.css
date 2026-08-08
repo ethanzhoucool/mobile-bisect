@@ -1,0 +1,93 @@
+:root {
+  --canvas: #0b0d10;
+  --surface: #12161c;
+  --surface-2: #171c24;
+  --line: #252b35;
+  --line-soft: #1b2029;
+  --text: #f4f7fb;
+  --muted: #8c96a8;
+  --blue: #6ea8fe;
+  --green: #35d69a;
+  --red: #ff5c72;
+  --amber: #f5b942;
+  --culprit: #ff334f;
+  --untested: #39414f;
+
+  /* Bundled-free stacks: the static report must render with zero network. */
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, 'JetBrains Mono', 'Geist Mono',
+    'Roboto Mono', 'Cascadia Mono', monospace;
+
+  /* 8px system. */
+  --s1: 8px;
+  --s2: 16px;
+  --s3: 24px;
+  --s4: 32px;
+  --s5: 40px;
+  --s6: 48px;
+  --s8: 64px;
+
+  --bar-h: 56px;
+  --rail-h: 148px;
+  --controls-h: 64px;
+
+  --ease-out: cubic-bezier(0.22, 0.65, 0.24, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.micro {
+  font-size: 16px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.c-good {
+  color: var(--green);
+}
+.c-bad {
+  color: var(--red);
+}
+.c-blue {
+  color: var(--blue);
+}
+.c-amber {
+  color: var(--amber);
+}
+.c-muted {
+  color: var(--muted);
+}

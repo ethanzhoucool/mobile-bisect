@@ -1,0 +1,56 @@
+{
+  "name": "expo-bisect",
+  "version": "0.1.0",
+  "description": "git bisect for visual mobile regressions: binary-search an Expo app's history on cloud devices until one commit is to blame",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "expo-bisect": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "examples",
+    "README.md"
+  ],
+  "keywords": [
+    "expo",
+    "react-native",
+    "bisect",
+    "regression",
+    "e2e",
+    "testing",
+    "revyl"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test": "tsc -b && vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@expo-bisect/core": "^0.1.0",
+    "@expo-bisect/git": "^0.1.0",
+    "picocolors": "^1.1.1",
+    "yaml": "^2.6.0"
+  },
+  "optionalDependencies": {
+    "@expo-bisect/report": "^0.1.0",
+    "@expo-bisect/revyl-runner": "^0.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"],
+    "baseUrl": ".",
+    // core and git are hard dependencies and resolve normally. report and
+    // revyl-runner are optional at runtime, so each mapping tries the sibling's
+    // built types first and falls back to a local shim — the CLI still compiles
+    // (and still runs, see src/adapters.ts) when they are absent.
+    "paths": {
+      "@expo-bisect/report": [
+        "../report/dist-node/index.d.ts",
+        "../report/dist/index.d.ts",
+        "./src/shims/report.d.ts"
+      ],
+      "@expo-bisect/revyl-runner": [
+        "../revyl-runner/dist/index.d.ts",
+        "./src/shims/revyl-runner.d.ts"
+      ]
+    }
+  },
+  "include": ["src/**/*"],
+  "references": [{ "path": "../core" }, { "path": "../git" }]
+}

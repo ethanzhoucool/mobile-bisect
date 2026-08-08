@@ -1,0 +1,41 @@
+{
+  "checks": [
+    {
+      "name": "Version",
+      "status": "ok",
+      "message": "vv0.1.71",
+      "details": "Commit: 84370a6bbf2d, Built: 2026-07-29T23:26:33Z"
+    },
+    {
+      "name": "Authentication",
+      "status": "ok",
+      "message": "Authenticated as dev@example.com",
+      "details": "Organization: 44444444-4444-4444-8444-444444444444"
+    },
+    {
+      "name": "API Connection",
+      "status": "ok",
+      "message": "Connected (latency: 83ms)"
+    },
+    {
+      "name": "Project Config",
+      "status": "warning",
+      "message": "No project configuration",
+      "details": "Run 'revyl init' to initialize a project"
+    },
+    {
+      "name": "Project/Auth Org Match",
+      "status": "warning",
+      "message": "No project configuration",
+      "details": "No .revyl/config.yaml found in current directory"
+    },
+    {
+      "name": "Build System",
+      "status": "warning",
+      "message": "Not detected",
+      "details": "Configure build settings in .revyl/config.yaml"
+    }
+  ],
+  "issues": 1,
+  "healthy": true
+}

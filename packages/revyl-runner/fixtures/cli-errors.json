@@ -1,0 +1,38 @@
+{
+  "device-launch-missing": {
+    "stage": "launch",
+    "stdout": "",
+    "stderr": "Error: backend device control request failed: proxy request failed for launch: request failed: Post \"https://backend.revyl.ai/api/v1/execution/device-proxy/22222222-2222-4222-8222-222222222222/launch\": context deadline exceeded (Client.Timeout exceeded while awaiting headers)",
+    "code": 1
+  },
+  "device-install-bad": {
+    "stage": "install",
+    "stdout": "",
+    "stderr": "Error: Installation failed",
+    "code": 1
+  },
+  "run-summary": {
+    "stage": "run-summary",
+    "stdout": "",
+    "stderr": "Error: no report found for task 22222222-2222-4222-8222-222222222222 \u2014 check the task_id and whether the run has completed",
+    "code": 1
+  },
+  "report-artifact-network": {
+    "stage": "artifact-network",
+    "stdout": "",
+    "stderr": "Error: network artifact not available for this session",
+    "code": 1
+  },
+  "report-artifact-trace": {
+    "stage": "artifact-trace",
+    "stdout": "",
+    "stderr": "Error: trace artifact not available for this session",
+    "code": 1
+  },
+  "device-validation-fail": {
+    "stage": "validation",
+    "stdout": "",
+    "stderr": "Error: validation failed",
+    "code": 1
+  }
+}

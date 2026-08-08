@@ -1,0 +1,10 @@
+{
+  "auth_method": "browser_api_key",
+  "authenticated": true,
+  "email": "dev@example.com",
+  "expired": false,
+  "expires_in_seconds": null,
+  "org_id": "44444444-4444-4444-8444-444444444444",
+  "org_name": "Example Org",
+  "user_id": "55555555-5555-4555-8555-555555555555"
+}

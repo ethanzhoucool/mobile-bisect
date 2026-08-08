@@ -1,0 +1,37 @@
+# The Orbit Store checkout flow.
+#
+# `label` is ours — it is the human line rendered under the phone in the report
+# and in the terminal. Everything else in a step is the Revyl-native body and is
+# passed through untouched, so you can use anything the runner understands.
+
+name: checkout-flow
+appId: com.orbit.store
+
+# The sentence every candidate build is judged against. `--expect` overrides it.
+expect: the order confirmation screen appears
+
+steps:
+  - label: Launch Orbit Store
+    launch:
+      resetState: true
+
+  - label: Open featured product
+    tap: the first product card on the home screen
+
+  - label: Tap "Add to cart"
+    tap: the "Add to cart" button on the product page
+
+  - label: Open cart
+    tap: the cart icon in the header
+
+  - label: Apply coupon SAVE10
+    type:
+      target: the coupon code field
+      text: SAVE10
+      submit: true
+
+  - label: Tap "Place order"
+    tap: the "Place order" button
+
+  - label: Assert order confirmation
+    assert: the "Order confirmed" heading is visible

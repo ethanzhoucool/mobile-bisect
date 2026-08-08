@@ -1,0 +1,48 @@
+{
+  "name": "@expo-bisect/report",
+  "version": "0.1.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Live + static visual report for expo-bisect runs.",
+  "main": "./dist-node/index.js",
+  "types": "./dist-node/index.d.ts",
+  "bin": {
+    "expo-bisect-report": "./bin/expo-bisect-report.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist-node/index.d.ts",
+      "default": "./dist-node/index.js"
+    },
+    "./app": "./src/app.ts",
+    "./app.css": "./src/styles/index.css"
+  },
+  "files": [
+    "dist",
+    "dist-node",
+    "bin",
+    "src"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build:app": "vite build",
+    "build:node": "tsc -p tsconfig.node.json",
+    "build": "npm run build:app && npm run build:node",
+    "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "render:fixture": "node ./bin/expo-bisect-report.mjs render ../../fixtures/demo-runs/orbit-checkout.jsonl ./out/report.html",
+    "serve:fixture": "node ./bin/expo-bisect-report.mjs serve ../../fixtures/demo-runs/orbit-checkout.jsonl"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vite-plugin-singlefile": "^2.0.3"
+  }
+}
