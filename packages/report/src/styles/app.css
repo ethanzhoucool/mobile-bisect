@@ -691,6 +691,11 @@ body {
   animation: drawer-rise 520ms var(--ease-out) both;
   transition: height 420ms var(--ease-out);
   overflow: hidden;
+  /* Column flex rather than a fixed head + calc()'d body: a diagnosis is one
+     sentence for some runs and four lines for others, and the body has to take
+     whatever height is left rather than assume a number. */
+  display: flex;
+  flex-direction: column;
 }
 @keyframes drawer-rise {
   from {
@@ -699,13 +704,21 @@ body {
 }
 
 .drawer-head {
-  height: 92px;
+  min-height: 92px;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 40px;
-  padding: 0 28px;
+  padding: 10px 28px;
   border-bottom: 1px solid var(--line-soft);
+}
+/* The tabs stay put while a long diagnosis scrolls under them. */
+.drawer-diagnosis {
+  min-width: 0;
+  max-height: 128px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .drawer-diagnosis p {
   margin: 5px 0 0;
@@ -751,8 +764,40 @@ body {
 
 .drawer-body {
   padding: 14px 28px;
-  height: calc(100% - 92px);
-  overflow: hidden;
+  flex: 1;
+  /* Without min-height a flex child refuses to shrink below its content, and
+     the overflow lands on the page instead of here. */
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Dark, unobtrusive scrollbars — the default light ones read as a rendering
+   bug against this canvas, and the report is often screenshotted. */
+.drawer-body,
+.drawer-diagnosis {
+  scrollbar-width: thin;
+  scrollbar-color: #2f3742 transparent;
+}
+.drawer-body::-webkit-scrollbar,
+.drawer-diagnosis::-webkit-scrollbar {
+  width: 10px;
+}
+.drawer-body::-webkit-scrollbar-track,
+.drawer-diagnosis::-webkit-scrollbar-track {
+  background: transparent;
+}
+.drawer-body::-webkit-scrollbar-thumb,
+.drawer-diagnosis::-webkit-scrollbar-thumb {
+  background: #2f3742;
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.drawer-body::-webkit-scrollbar-thumb:hover,
+.drawer-diagnosis::-webkit-scrollbar-thumb:hover {
+  background: #3c4654;
+  background-clip: padding-box;
 }
 
 .ev-visual {
