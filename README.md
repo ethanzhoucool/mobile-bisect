@@ -17,14 +17,16 @@ npx mobile-bisect \
 ```
 FIRST BAD COMMIT
 
-  8d4c2f1  Refactor order response handling
-  priya.raman · 64 commits searched · 6 runs · 4m 21s
+  03735ed  Refactor order response handling
+  Dan Oketch · 64 commits searched · 6 runs · 4m 21s
 
   POST /orders returned 200 in both builds.
   Navigation stopped after the response parser returned undefined.
 
-  report → .mobile-bisect/runs/2026-08-07-1641/report.html
+  report → .mobile-bisect/runs/20260810T210613-checkout-flow/report.html
 ```
+
+That is the included demo, not a mock-up — `examples/orbit-store` really does have those 64 commits, and `03735ed` really is the one that breaks checkout.
 
 ---
 
@@ -114,10 +116,10 @@ The boundaries are real commits, not fixtures:
 
 | | Commit | Subject |
 |---|---|---|
-| `v1.4.0` (good) | `c11cd02` | Release v1.4.0 |
-| last good | `061d6c5` | Preserve checkout navigation |
-| **first bad** | `82a753c` | Refactor order response handling |
-| `HEAD` (bad) | `9cf9910` | Update README screenshots |
+| `v1.4.0` (good) | `622ed0c` | Release v1.4.0 |
+| last good | `0e90887` | Preserve checkout navigation |
+| **first bad** | `03735ed` | Refactor order response handling |
+| `HEAD` (bad) | `7f755fd` | Update README screenshots |
 
 `examples/orbit-store/scripts/verify-bisect.sh` proves it independently with a plain `git bisect run` — it lands on index 41 in 6 steps without involving this tool at all.
 
