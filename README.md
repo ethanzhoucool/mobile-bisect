@@ -108,6 +108,7 @@ Supported:
 
 Not yet:
 
+- The Expo adapter against a **cloud** device — it serves each candidate's bundle from localhost, which a cloud device cannot reach. `--dry-run` works; for a real cloud run use `--framework revyl-remote`.
 - A Flutter adapter (`xcode` and `gradle` do detect a Flutter app's native projects, but nothing runs the Flutter tooling for you)
 - Multiple flows in one bisection
 - Automatic code repair

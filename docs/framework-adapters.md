@@ -202,6 +202,14 @@ loaded lazily, so a repo that never uses it never pays for it.
 
 ## Known gaps
 
+- **The Expo adapter cannot reach a cloud device yet.** It starts Metro on this
+  machine and hands the device a URL built from `host`, which defaults to
+  `127.0.0.1` — and a cloud device cannot route to your loopback. The seam for a
+  relay hostname exists (`ExpoCandidateRunnerOptions.host`) but nothing fills
+  it; `revyl dev` owns the tunnel today, and it is a long-lived process bound to
+  one worktree, which is the opposite of what a bisect wants. Until that is
+  wired, Expo works under `--dry-run`, and real cloud runs should use
+  `revyl-remote`.
 - **Flutter** has no adapter. A Flutter app *is* detected by `xcode` and
   `gradle` (its `ios/Runner.xcworkspace` and `android/` are real), and building
   through them works once `flutter pub get` has generated the config — but
