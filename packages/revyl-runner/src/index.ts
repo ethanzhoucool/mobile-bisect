@@ -1,4 +1,9 @@
 export { RevylRunner, type RevylRunnerOptions } from './runner.js';
+export {
+  RevylRemoteAdapter,
+  platformsIn,
+  type RevylRemoteAdapterOptions,
+} from './remote-adapter.js';
 export { checkRevylAuth, type RevylAuthCheck } from './auth.js';
 export { resolveRevylCli, createExecutor, type CliExecutor, type CliResult } from './exec.js';
 export { RevylError, RevylInfraError, RevylAuthError, UnsupportedStepError } from './errors.js';

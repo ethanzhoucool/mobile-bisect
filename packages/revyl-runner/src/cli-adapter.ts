@@ -40,11 +40,24 @@ export interface StartSessionArgs {
   idleTimeoutSec?: number;
 }
 
+/**
+ * `device targets` lists runtimes as `iOS 18.5` / `Android 14`, and the API
+ * rejects a bare `18.5` with `unsupported ios runtime "18.5"` — but a bare
+ * number is what everyone types, and what a device matrix in a doc looks like.
+ * Normalising here means one place knows, instead of every caller.
+ */
+export function normaliseOsVersion(platform: 'ios' | 'android', osVersion: string): string {
+  const value = osVersion.trim();
+  if (!value) return value;
+  if (/^[A-Za-z]/.test(value)) return value; // already prefixed
+  return `${platform === 'ios' ? 'iOS' : 'Android'} ${value}`;
+}
+
 export function deviceStartArgs(o: StartSessionArgs): string[] {
   // `--open` defaults to true and would pop a browser tab per candidate.
   const args = ['device', 'start', '--json', '--open=false', '--platform', o.platform];
   if (o.deviceModel) args.push('--device-model', o.deviceModel);
-  if (o.osVersion) args.push('--os-version', o.osVersion);
+  if (o.osVersion) args.push('--os-version', normaliseOsVersion(o.platform, o.osVersion));
   if (o.buildId) args.push('--build-version-id', o.buildId);
   else if (o.appId) args.push('--app-id', o.appId);
   if (o.idleTimeoutSec) args.push('--timeout', String(Math.round(o.idleTimeoutSec)));
@@ -382,9 +395,46 @@ export function parseAuthStatus(res: CliResult): AuthStatus {
   };
 }
 
+export interface RemoteBuildArgs {
+  platform: 'ios' | 'android';
+  /** Version label. The candidate SHA makes a bisect's builds self-describing. */
+  version?: string;
+  /** Overrides `build.platforms.<key>.image` from the project config. */
+  image?: string;
+  /** Seconds. Overrides the config's per-platform timeout. */
+  timeoutSec?: number;
+}
+
+/**
+ * Builds a candidate on Revyl's cloud runners instead of on this machine.
+ *
+ * The CLI uploads the working directory it is pointed at — which for a bisect
+ * is a detached worktree at one commit — runs the project's configured build
+ * command on a Revyl macOS runner, and registers the artifact. No local Xcode,
+ * no local Gradle, no local JDK.
+ *
+ * `--no-set-current` for the same reason as an upload: a bisect produces one
+ * build per candidate and must not leave the app pointing at whichever commit
+ * the search happened to test last.
+ */
+export function remoteBuildArgs(o: RemoteBuildArgs): string[] {
+  const args = ['build', '--remote', '--json', '--no-set-current', '--platform', o.platform];
+  if (o.version) args.push('--version', o.version);
+  if (o.image) args.push('--image', o.image);
+  if (o.timeoutSec) args.push('--timeout', String(Math.round(o.timeoutSec)));
+  return args;
+}
+
+/** `-C <dir>` makes the CLI act as if started in the candidate's worktree. */
+export function inDirectory(dir: string, args: string[]): string[] {
+  return ['-C', dir, ...args];
+}
+
 export interface UploadedBuildInfo {
   buildId: string;
   version?: string;
+  /** The app's bundle/package id, when the CLI reports it. Used to launch. */
+  bundleId?: string;
 }
 
 /**
@@ -407,7 +457,12 @@ export function parseUploadedBuild(res: CliResult): UploadedBuildInfo | undefine
       str(holder.id);
     if (!buildId) continue;
     const version = str(holder.version) ?? str(json.version);
-    return { buildId, ...(version ? { version } : {}) };
+    const bundleId =
+      str(holder.package_id) ??
+      str(holder.bundle_id) ??
+      str(json.package_id) ??
+      str(json.bundle_id);
+    return { buildId, ...(version ? { version } : {}), ...(bundleId ? { bundleId } : {}) };
   }
   return undefined;
 }

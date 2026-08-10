@@ -44,6 +44,10 @@ export interface BuildConfig {
   variant?: string;
   /** Overrides module+variant, e.g. `:app:assembleFreeDebug`. */
   task?: string;
+
+  // --- revyl-remote ---
+  /** Remote build image, e.g. `ios-macos-26-xcode-26.2`. */
+  image?: string;
 }
 
 export interface MobileBisectConfig {
@@ -55,7 +59,7 @@ export interface MobileBisectConfig {
    * Which adapter prepares candidates. Omit (or `auto`) to detect it: Expo
    * swaps JavaScript, xcode and gradle compile a binary per commit.
    */
-  framework?: 'auto' | 'expo' | 'xcode' | 'gradle';
+  framework?: 'auto' | 'expo' | 'xcode' | 'gradle' | 'revyl-remote';
   platform?: 'ios' | 'android';
   deviceModel?: string;
   osVersion?: string;

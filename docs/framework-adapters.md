@@ -19,11 +19,12 @@ legitimately can — and refuses to when it cannot.
 
 ## Shipped adapters
 
-| Name | Languages | Prepares by | Platforms |
-|---|---|---|---|
-| `expo` | JS/TS on Expo | starting Metro or exporting a bundle, then deep-linking the dev client | ios, android |
-| `xcode` | Swift, Objective-C | `xcodebuild -sdk iphonesimulator` → zip the `.app` | ios |
-| `gradle` | Kotlin, Java | `./gradlew :app:assembleDebug` → the `.apk` | android |
+| Name | Languages | Prepares by | Platforms | Toolchain needed |
+|---|---|---|---|---|
+| `expo` | JS/TS on Expo | starting Metro or exporting a bundle, then deep-linking the dev client | ios, android | node |
+| `xcode` | Swift, Objective-C | `xcodebuild -sdk iphonesimulator` → zip the `.app` | ios | Xcode, here |
+| `gradle` | Kotlin, Java | `./gradlew :app:assembleDebug` → the `.apk` | android | JDK + Android SDK, here |
+| `revyl-remote` | anything the project can build | `revyl build --remote` on Revyl's runners | whatever the config declares | **none** |
 
 Pick one with `--framework`, or let detection choose:
 
@@ -33,7 +34,37 @@ mobile-bisect run --good v1.4.0 --bad HEAD --framework gradle --platform android
 ```
 
 `--framework` accepts the words people actually type: `ios` and `swift` mean
-`xcode`, `android` and `kotlin` mean `gradle`.
+`xcode`, `android` and `kotlin` mean `gradle`, `remote` and `cloud` mean
+`revyl-remote`.
+
+### Building nothing locally
+
+`revyl-remote` is the adapter for a machine with no mobile toolchain on it —
+and, increasingly, for one that has a toolchain and would rather not spend an
+hour of it on a search:
+
+```bash
+mobile-bisect run --good v2.0.0 --bad HEAD --framework revyl-remote
+```
+
+Per candidate it points `revyl build --remote` at that commit's worktree. The
+CLI uploads the tree, a Revyl macOS runner executes the project's own build
+command from `.revyl/config.yaml`, and what comes back is a build id already
+registered with the runtime — so unlike the local adapters there is no artifact
+to upload afterwards.
+
+Two things follow from delegating to the project's own config:
+
+- **It is framework-agnostic.** The config says how the project builds itself,
+  so Swift, Kotlin, Flutter and bare React Native all work through one adapter.
+- **The build command must be committed.** It runs at the candidate commit. A
+  script that only exists in your working tree is missing exactly when the
+  bisect needs it. `.revyl/config.yaml` itself is usually untracked, so the
+  adapter copies it in from your checkout and removes it again afterwards —
+  a seeded file left behind would make the worktree diff lie.
+
+Measured on a SwiftUI app (Vault, ~3.9k lines): **51 seconds per candidate
+build**, so a 64-commit range is about six minutes of build time.
 
 ## Detection
 
@@ -44,6 +75,12 @@ Every adapter is asked, and the most confident one that says yes wins.
 | Expo project (an `expo` dependency) | 0.95 |
 | `.xcworkspace` / `.xcodeproj` or `settings.gradle` at the repo root | 0.80 |
 | the same, under `ios/` or `android/` | 0.55 |
+| a `.revyl/config.yaml` with a build command (`revyl-remote`) | 0.35 |
+
+`revyl-remote` scores below everything on purpose. Building in the cloud is the
+right answer when there is no toolchain here, not the default when there is — a
+local build has no upload and no queue. Ask for it explicitly, or set
+`framework: 'revyl-remote'` in the config.
 
 The ordering is deliberate. A prebuilt Expo app has `ios/` and `android/`
 directories too, and swapping its JavaScript beats rebuilding either of them —

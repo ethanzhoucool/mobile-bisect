@@ -398,8 +398,10 @@ function configFrom(
     expect: extra.expect ?? existing.expect,
     ...(framework ? { framework } : {}),
     platform,
-    deviceModel: existing.deviceModel ?? (platform === 'android' ? 'Pixel 7' : 'iPhone 15 Pro'),
-    osVersion: existing.osVersion ?? (platform === 'android' ? '14' : '17.5'),
+    // A pair `revyl device targets` actually offers; a model/runtime combination
+    // it does not have is refused at session start, one candidate at a time.
+    deviceModel: existing.deviceModel ?? (platform === 'android' ? 'Pixel 7' : 'iPhone 16'),
+    osVersion: existing.osVersion ?? (platform === 'android' ? 'Android 14' : 'iOS 18.5'),
     maxCandidates: existing.maxCandidates ?? 64,
   };
   const appPath = extra.appPath ?? existing.build?.appPath;

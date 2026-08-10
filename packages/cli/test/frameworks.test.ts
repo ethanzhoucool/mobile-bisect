@@ -95,7 +95,9 @@ describe('detectFrameworks', () => {
 
     const summary = await detectFrameworks({ projectRoot: dir, config: {} });
     expect(summary.picked).toBeUndefined();
-    expect(summary.considered.map((c) => c.name).sort()).toEqual(['expo', 'gradle', 'xcode']);
+    expect(summary.considered.map((c) => c.name).sort()).toEqual([
+      'expo', 'gradle', 'revyl-remote', 'xcode',
+    ]);
     for (const c of summary.considered) expect(c.detection.reason).toBeTruthy();
   });
 });
@@ -154,7 +156,7 @@ describe('config reaches the adapter', () => {
 
 describe('createAdapter', () => {
   it('builds each adapter by name', async () => {
-    for (const name of ['expo', 'xcode', 'gradle'] as const) {
+    for (const name of ['expo', 'xcode', 'gradle', 'revyl-remote'] as const) {
       const adapter = await createAdapter(name, { projectRoot: root, config: {} });
       expect(adapter.name).toBe(name);
     }
@@ -194,7 +196,13 @@ describe('--framework parsing', () => {
   });
 
   it('rejects an unknown framework with the supported list', () => {
-    expect(() => run(['--framework', 'unity'])).toThrow(/expo, xcode or gradle/);
+    expect(() => run(['--framework', 'unity'])).toThrow(/expo, xcode, gradle or revyl-remote/);
+  });
+
+  it('accepts the aliases for building in the cloud', () => {
+    for (const alias of ['revyl-remote', 'remote', 'cloud', 'revyl']) {
+      expect(run(['--framework', alias])).toMatchObject({ framework: 'revyl-remote' });
+    }
   });
 
   it('carries the build flags through', () => {

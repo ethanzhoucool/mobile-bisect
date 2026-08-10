@@ -10,7 +10,9 @@
  * The scores are deliberate — an Expo app that has been prebuilt has `ios/` and
  * `android/` directories too, and swapping its JavaScript is seconds where
  * rebuilding it is minutes, so Expo outranks both native adapters on a project
- * that is genuinely both.
+ * that is genuinely both. `revyl-remote` scores below everything: building in
+ * the cloud is the right answer when there is no toolchain on this machine, not
+ * the default when there is.
  */
 
 import type {
@@ -24,7 +26,7 @@ import type { FrameworkName } from './args.js';
 import { CliError } from './errors.js';
 import type { MobileBisectConfig } from './config.js';
 
-export const FRAMEWORK_NAMES: FrameworkName[] = ['expo', 'xcode', 'gradle'];
+export const FRAMEWORK_NAMES: FrameworkName[] = ['expo', 'xcode', 'gradle', 'revyl-remote'];
 
 export interface AdapterFactoryInput {
   /** The user's repo root. */
@@ -57,12 +59,14 @@ const PACKAGE_FOR: Record<FrameworkName, string> = {
   expo: '@mobile-bisect/expo-runner',
   xcode: '@mobile-bisect/native-runner',
   gradle: '@mobile-bisect/native-runner',
+  'revyl-remote': '@mobile-bisect/revyl-runner',
 };
 
 const EXPORT_FOR: Record<FrameworkName, string> = {
   expo: 'ExpoAdapter',
   xcode: 'XcodeAdapter',
   gradle: 'GradleAdapter',
+  'revyl-remote': 'RevylRemoteAdapter',
 };
 
 type AdapterCtor = new (opts: Record<string, unknown>) => FrameworkAdapter;
@@ -109,6 +113,13 @@ function optionsFor(name: FrameworkName, input: AdapterFactoryInput): Record<str
       };
     case 'gradle':
       return { ...common, ...pick(build, ['projectDir', 'module', 'variant', 'task']) };
+    case 'revyl-remote':
+      return {
+        projectRoot,
+        ...(onLog ? { onLog } : {}),
+        ...(build.image ? { image: build.image } : {}),
+        ...(build.timeout ? { buildTimeoutSec: build.timeout } : {}),
+      };
   }
 }
 
@@ -197,7 +208,9 @@ export function explainNoMatch(summary: DetectionSummary): string {
   }
   for (const u of summary.unavailable) lines.push(`  ${u.name}: ${u.reason}`);
   lines.push('');
-  lines.push('Set `framework` in mobile-bisect.config.ts, or pass --framework expo|xcode|gradle.');
+  lines.push(
+    'Set `framework` in mobile-bisect.config.ts, or pass --framework expo|xcode|gradle|revyl-remote.',
+  );
   return lines.join('\n');
 }
 

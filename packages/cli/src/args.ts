@@ -9,7 +9,7 @@
 import { CliError } from './errors.js';
 
 /** Kept in step with FRAMEWORK_NAMES in frameworks.ts, which owns the aliases. */
-export type FrameworkName = 'expo' | 'xcode' | 'gradle';
+export type FrameworkName = 'expo' | 'xcode' | 'gradle' | 'revyl-remote';
 
 export type Command = 'init' | 'run' | 'resume' | 'report' | 'replay' | 'help' | 'version';
 
@@ -311,16 +311,25 @@ const FRAMEWORK_ALIASES: Record<string, FrameworkName> = {
   java: 'gradle',
   'react-native': 'expo',
   rn: 'expo',
+  'revyl-remote': 'revyl-remote',
+  remote: 'revyl-remote',
+  revyl: 'revyl-remote',
+  cloud: 'revyl-remote',
 };
 
 function frameworkName(value: string | undefined): FrameworkName | undefined {
   if (value === undefined || value.toLowerCase() === 'auto') return undefined;
   const resolved = FRAMEWORK_ALIASES[value.toLowerCase()];
   if (resolved) return resolved;
-  throw new CliError(`\`--framework\` must be expo, xcode or gradle (got \`${value}\`).`, {
-    hint: 'Aliases: ios/swift -> xcode, android/kotlin -> gradle. Omit it to detect automatically.',
-    exitCode: 2,
-  });
+  throw new CliError(
+    `\`--framework\` must be expo, xcode, gradle or revyl-remote (got \`${value}\`).`,
+    {
+      hint:
+        'Aliases: ios/swift -> xcode, android/kotlin -> gradle, remote/cloud -> revyl-remote ' +
+        '(builds every candidate on Revyl, no local toolchain). Omit it to detect automatically.',
+      exitCode: 2,
+    },
+  );
 }
 
 // --- entry point -----------------------------------------------------------
@@ -487,7 +496,7 @@ RUN OPTIONS
   --device-model <name>     Cloud device model, e.g. "iPhone 15 Pro"
   --os-version <version>    Cloud device OS version, e.g. "17.5"
   --platform <ios|android>  Defaults to ios
-  --framework <name>        expo | xcode | gradle. Detected when omitted
+  --framework <name>        expo | xcode | gradle | revyl-remote. Detected when omitted
   --scheme <name>           Xcode scheme to build (xcode only)
   --variant <name>          Gradle variant to assemble (gradle only, default debug)
   --project-dir <dir>       Subdirectory holding the native project, e.g. ios
@@ -542,7 +551,7 @@ the command to resume.
   --device-model <name>     Cloud device model, e.g. "iPhone 15 Pro"
   --os-version <version>    Cloud device OS version, e.g. "17.5"
   --platform <ios|android>  Defaults to ios
-  --framework <name>        expo | xcode | gradle. Detected when omitted
+  --framework <name>        expo | xcode | gradle | revyl-remote. Detected when omitted
   --scheme <name>           Xcode scheme to build (xcode only)
   --variant <name>          Gradle variant to assemble (gradle only, default debug)
   --project-dir <dir>       Subdirectory holding the native project, e.g. ios

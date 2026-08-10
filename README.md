@@ -40,7 +40,7 @@ Git already has the binary search. What's missing is something that can look at 
 
 1. `git rev-list --ancestry-path` enumerates the commits between your good and bad refs.
 2. For each candidate the tool picks, it checks that commit out into a **temporary worktree** — your working tree is never touched.
-3. A **framework adapter** makes that commit runnable. Expo swaps the JavaScript bundle into one reusable dev client; Xcode and Gradle compile the commit for real.
+3. A **framework adapter** makes that commit runnable. Expo swaps the JavaScript bundle into one reusable dev client; Xcode and Gradle compile the commit for real; `revyl-remote` compiles it on a cloud runner instead of on your machine.
 4. It replays your flow on a Revyl cloud device and evaluates your plain-language assertion.
 5. Good, bad, or inconclusive — the search space halves, and it goes again.
 6. When one commit remains, you get synchronized recordings of the last good and first bad builds, plus the network trace, logs, and diff.
@@ -49,11 +49,17 @@ Git already has the binary search. What's missing is something that can look at 
 
 ## Frameworks
 
-| `--framework` | Languages | How a candidate is prepared | Per candidate |
+| `--framework` | Languages | How a candidate is prepared | Builds where |
 |---|---|---|---|
-| `expo` | JS/TS on Expo | Metro or an exported bundle, deep-linked into one dev client | seconds |
-| `xcode` | Swift, Objective-C | `xcodebuild -sdk iphonesimulator`, zipped and uploaded | minutes |
-| `gradle` | Kotlin, Java | `./gradlew :app:assembleDebug` | minutes |
+| `expo` | JS/TS on Expo | Metro or an exported bundle, deep-linked into one dev client | here (seconds) |
+| `xcode` | Swift, Objective-C | `xcodebuild -sdk iphonesimulator`, zipped and uploaded | here (minutes) |
+| `gradle` | Kotlin, Java | `./gradlew :app:assembleDebug` | here (minutes) |
+| `revyl-remote` | anything with a Revyl build config | `revyl build --remote` on Revyl's macOS runners | **in the cloud** |
+
+`revyl-remote` needs no mobile toolchain on your machine at all — no Xcode, no
+JDK, no Android SDK. It uploads each candidate's worktree, runs the project's
+own build command on a Revyl runner, and installs the result on a cloud device.
+Measured at ~51s per candidate for a 3.9k-line SwiftUI app.
 
 Detection picks one, so most projects never pass the flag:
 
@@ -61,6 +67,7 @@ Detection picks one, so most projects never pass the flag:
 mobile-bisect run --good v1.4.0 --bad HEAD                       # detected
 mobile-bisect run --good v1.4.0 --bad HEAD --framework xcode --scheme Orbit
 mobile-bisect run --good v1.4.0 --bad HEAD --framework gradle --platform android
+mobile-bisect run --good v2.0.0 --bad HEAD --framework revyl-remote   # nothing built locally
 ```
 
 Expo wins on a project that is both — a prebuilt Expo app has an `ios/` directory too, and swapping its JavaScript beats rebuilding it. A bare React Native app has no `expo` dependency, so it falls through to `xcode` or `gradle`, which are the tools that can actually rebuild it.
@@ -91,6 +98,7 @@ Supported:
 - **Expo** apps, when the changes between good and bad are JavaScript only
 - **Swift / Objective-C** apps through Xcode, compiled per candidate
 - **Kotlin / Java** apps through Gradle, compiled per candidate
+- **Any project with a Revyl build config**, compiled per candidate on Revyl's runners with no local toolchain
 - iOS and Android cloud devices
 - One deterministic flow, one assertion
 - Commit ranges from 2 to 64 candidates

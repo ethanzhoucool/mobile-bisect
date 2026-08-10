@@ -1,0 +1,10 @@
+{
+  "status": "success",
+  "platform": "ios",
+  "build_job_id": "3defb520-0000-0000-0000-000000000000",
+  "build_version_id": "9df45d90-0000-0000-0000-000000000000",
+  "version": "03735ed",
+  "artifact_type": "app",
+  "package_id": "com.revyl.vault",
+  "app_id": "449ae04e-0000-0000-0000-000000000000"
+}

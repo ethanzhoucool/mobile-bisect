@@ -254,3 +254,62 @@ describe('build upload', () => {
     expect(cli.parseUploadedBuild(fail({ stderr: 'boom', stdout: 'not json' }))).toBeUndefined();
   });
 });
+
+describe('remote build', () => {
+  it('builds on Revyl runners without touching the local toolchain', () => {
+    const args = cli.remoteBuildArgs({ platform: 'ios', version: '03735ed', timeoutSec: 2700 });
+
+    expect(args.slice(0, 2)).toEqual(['build', '--remote']);
+    expect(args).toContain('--platform');
+    expect(args).toContain('ios');
+    expect(args).toContain('--version');
+    expect(args).toContain('03735ed');
+    expect(args).toContain('--timeout');
+    expect(args).toContain('2700');
+    // Same reason as an upload: six candidates must not move the app's pointer.
+    expect(args).toContain('--no-set-current');
+  });
+
+  it('passes an image only when one was chosen', () => {
+    expect(cli.remoteBuildArgs({ platform: 'ios' })).not.toContain('--image');
+    expect(cli.remoteBuildArgs({ platform: 'ios', image: 'ios-macos-26-xcode-26.2' })).toContain(
+      'ios-macos-26-xcode-26.2',
+    );
+  });
+
+  it('runs in the candidate worktree, not the user checkout', () => {
+    expect(cli.inDirectory('/tmp/wt', ['build', '--remote'])).toEqual([
+      '-C', '/tmp/wt', 'build', '--remote',
+    ]);
+  });
+
+  it('reads the build id and bundle id out of a real remote-build response', () => {
+    const parsed = cli.parseUploadedBuild(ok('build-remote'));
+    expect(parsed?.buildId).toBe('9df45d90-0000-0000-0000-000000000000');
+    expect(parsed?.version).toBe('03735ed');
+    // package_id is what `device launch --bundle-id` needs.
+    expect(parsed?.bundleId).toBe('com.revyl.vault');
+  });
+});
+
+describe('os version normalisation', () => {
+  it('prefixes a bare number, which is what people type', () => {
+    expect(cli.normaliseOsVersion('ios', '18.5')).toBe('iOS 18.5');
+    expect(cli.normaliseOsVersion('android', '14')).toBe('Android 14');
+  });
+
+  it('leaves an already-prefixed runtime alone', () => {
+    expect(cli.normaliseOsVersion('ios', 'iOS 26.2')).toBe('iOS 26.2');
+    expect(cli.normaliseOsVersion('android', 'Android 14')).toBe('Android 14');
+  });
+
+  it('normalises on the way into device start', () => {
+    const args = cli.deviceStartArgs({ platform: 'ios', deviceModel: 'iPhone 16', osVersion: '18.5' });
+    expect(args).toContain('iOS 18.5');
+    expect(args).not.toContain('18.5');
+  });
+
+  it('leaves an empty value empty rather than inventing a runtime', () => {
+    expect(cli.normaliseOsVersion('ios', '  ')).toBe('  '.trim());
+  });
+});
