@@ -83,7 +83,7 @@ describe('parseArgs', () => {
   });
 
   it('suggests the nearest command', () => {
-    expect(reject(['reprot']).hint).toContain('expo-bisect report');
+    expect(reject(['reprot']).hint).toContain('mobile-bisect report');
   });
 
   it('validates numeric ranges', () => {
@@ -133,7 +133,7 @@ describe('helpText', () => {
   });
 
   it('has a focused page per command', () => {
-    expect(helpText('run')).toContain('expo-bisect run —');
-    expect(helpText('init')).toContain('expo-bisect init —');
+    expect(helpText('run')).toContain('mobile-bisect run —');
+    expect(helpText('init')).toContain('mobile-bisect init —');
   });
 });

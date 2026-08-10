@@ -1,5 +1,5 @@
 /**
- * Run persistence: `.expo-bisect/runs/<run-id>/{state.json,events.jsonl,artifacts/}`.
+ * Run persistence: `.mobile-bisect/runs/<run-id>/{state.json,events.jsonl,artifacts/}`.
  *
  * events.jsonl is append-only and serialized through an in-process queue so
  * concurrent `append()` calls can never interleave a partial line. state.json is
@@ -14,7 +14,7 @@ import * as path from 'node:path';
 import { redactValue } from './redact.js';
 import type { BisectEvent, BisectState } from './types.js';
 
-export const RUNS_DIRNAME = path.join('.expo-bisect', 'runs');
+export const RUNS_DIRNAME = path.join('.mobile-bisect', 'runs');
 
 export class RunStore {
   readonly dir: string;

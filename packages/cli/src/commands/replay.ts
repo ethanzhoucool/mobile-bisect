@@ -9,7 +9,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import pc from 'picocolors';
-import { RunStore, type BisectEvent } from '@expo-bisect/core';
+import { RunStore, type BisectEvent } from '@mobile-bisect/core';
 import { loadReport } from '../adapters.js';
 import type { ReplayOptions } from '../args.js';
 import { CliError } from '../errors.js';

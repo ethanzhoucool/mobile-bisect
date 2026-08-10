@@ -2,7 +2,7 @@ import { mkdtemp, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import type { FlowDefinition } from '@expo-bisect/core';
+import type { FlowDefinition } from '@mobile-bisect/core';
 import { checkRevylAuth } from './auth.js';
 import { parseSessionReport } from './cli-adapter.js';
 import type { FetchLike } from './download.js';
@@ -67,7 +67,7 @@ let artifactsDir: string;
 /** Mirrors the CLI's layout: artifactsDir sits inside the run dir. */
 let runDir: string;
 beforeEach(async () => {
-  runDir = await mkdtemp(join(tmpdir(), 'expo-bisect-run-'));
+  runDir = await mkdtemp(join(tmpdir(), 'mobile-bisect-run-'));
   artifactsDir = join(runDir, 'artifacts');
 });
 afterEach(() => {
@@ -170,6 +170,106 @@ describe('installOrLaunch', () => {
     const r = runner(executor, { bundleErrorCheck: true, bundleSettleMs: 0 });
     await r.startSession({ platform: 'ios' });
     await expect(r.installOrLaunch({ sessionId: SESSION, bundleUrl: 'exp+orbit://x' })).resolves.toBeUndefined();
+  });
+
+  it('skips the bundler error-screen check for a native candidate, which has no bundler', async () => {
+    const { executor, argvFor } = fakeCli({ 'build upload': ok('build-upload') });
+    const r = runner(executor, { bundleErrorCheck: true, bundleSettleMs: 0 });
+    await r.startSession({ platform: 'ios' });
+    await r.installOrLaunch({ sessionId: SESSION, appPath: '/tmp/Orbit.app.zip' });
+
+    expect(argvFor('device validation')).toHaveLength(0);
+  });
+});
+
+describe('native builds', () => {
+  it('uploads an artifact and installs the id that came back', async () => {
+    const { executor, argvFor } = fakeCli({ 'build upload': ok('build-upload') });
+    const r = runner(executor);
+    await r.startSession({ platform: 'ios' });
+
+    await r.installOrLaunch({ sessionId: SESSION, appPath: '/tmp/Orbit.app.zip', resetState: true });
+
+    const upload = argvFor('build upload')[0]!;
+    expect(upload).toEqual(expect.arrayContaining(['--file', '/tmp/Orbit.app.zip']));
+    expect(upload).toEqual(expect.arrayContaining(['--platform', 'ios']));
+
+    const install = argvFor('device install')[0]!;
+    expect(install).toEqual(
+      expect.arrayContaining(['--build-version-id', '509b8cac-7be8-448b-a31d-74591245cdcf']),
+    );
+  });
+
+  it('tags the upload with the platform the session was started for', async () => {
+    const { executor, argvFor } = fakeCli({ 'build upload': ok('build-upload') });
+    const r = runner(executor);
+    await r.startSession({ platform: 'android' });
+    await r.installOrLaunch({ sessionId: SESSION, appPath: '/tmp/app.apk' });
+
+    expect(argvFor('build upload')[0]).toEqual(expect.arrayContaining(['--platform', 'android']));
+  });
+
+  it('does not re-upload when the candidate already has a build id', async () => {
+    const { executor, argvFor } = fakeCli({ 'build upload': ok('build-upload') });
+    const r = runner(executor);
+    await r.startSession({ platform: 'ios' });
+
+    await r.installOrLaunch({ sessionId: SESSION, buildId: 'cached_1', appPath: '/tmp/Orbit.app.zip' });
+
+    expect(argvFor('build upload')).toHaveLength(0);
+    expect(argvFor('device install')[0]).toEqual(
+      expect.arrayContaining(['--build-version-id', 'cached_1']),
+    );
+  });
+
+  it('launches by bundle id when the candidate carries one', async () => {
+    const { executor, argvFor } = fakeCli({ 'build upload': ok('build-upload') });
+    const r = runner(executor);
+    await r.startSession({ platform: 'ios' });
+
+    await r.installOrLaunch({
+      sessionId: SESSION,
+      appPath: '/tmp/Orbit.app.zip',
+      bundleId: 'com.orbit.store',
+    });
+
+    expect(argvFor('device launch')[0]).toEqual(
+      expect.arrayContaining(['--bundle-id', 'com.orbit.store']),
+    );
+  });
+
+  it('classifies a failed upload as infrastructure, never as a bad commit', async () => {
+    const { executor } = fakeCli({ 'build upload': fail({ stderr: 'Error: 413 payload too large' }) });
+    const r = runner(executor);
+    await r.startSession({ platform: 'ios' });
+
+    await expect(
+      r.installOrLaunch({ sessionId: SESSION, appPath: '/tmp/Orbit.app.zip' }),
+    ).rejects.toMatchObject({ name: 'RevylInfraError', stage: 'build-upload' });
+  });
+
+  it('refuses to guess when the upload returns no id', async () => {
+    const { executor } = fakeCli({
+      'build upload': { argv: [], code: 0, stdout: '{"ok":true}', stderr: '', durationMs: 1, timedOut: false },
+    });
+    const r = runner(executor);
+    await r.startSession({ platform: 'ios' });
+
+    await expect(
+      r.installOrLaunch({ sessionId: SESSION, appPath: '/tmp/Orbit.app.zip' }),
+    ).rejects.toThrow(/no build id/);
+  });
+
+  it('exposes uploadBuild directly, for an adapter that wants the id up front', async () => {
+    const { executor } = fakeCli({ 'build upload': ok('build-upload') });
+    const r = runner(executor);
+
+    const built = await r.uploadBuild({
+      appPath: '/tmp/Orbit.app.zip',
+      platform: 'ios',
+      version: '8d4c2f1',
+    });
+    expect(built).toEqual({ buildId: '509b8cac-7be8-448b-a31d-74591245cdcf', version: '8d4c2f1' });
   });
 });
 

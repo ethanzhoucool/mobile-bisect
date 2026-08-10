@@ -8,7 +8,7 @@
  * the published docs, which document flags only and no output schemas.
  */
 
-import type { FlowStep } from '@expo-bisect/core';
+import type { FlowStep } from '@mobile-bisect/core';
 import type { CliResult } from './exec.js';
 import { UnsupportedStepError } from './errors.js';
 
@@ -78,6 +78,33 @@ export function deviceInstallArgs(
 
 export function deviceLaunchArgs(bundleId: string, target: SessionTarget): string[] {
   return withTarget(['device', 'launch', '--json', '--bundle-id', bundleId], target);
+}
+
+export interface BuildUploadArgs {
+  /** Local artifact: a zipped simulator .app, an .apk, or an .ipa. */
+  filePath: string;
+  platform: 'ios' | 'android';
+  /** App to attach the build to. Required unless the project has `.revyl/config.yaml`. */
+  appId?: string;
+  /** Version label. The candidate SHA makes uploads self-describing. */
+  version?: string;
+}
+
+/**
+ * Registers a locally built artifact so a device can install it. This is the
+ * native adapters' half of the pipeline: they compile, this uploads, and the
+ * resulting build id is what `device install --build-version-id` takes.
+ *
+ * `--no-set-current` matters. A bisect uploads one build per candidate, and
+ * moving the app's "current" version six times would leave the user's app
+ * pointing at whichever commit the search happened to test last.
+ */
+export function buildUploadArgs(o: BuildUploadArgs): string[] {
+  const args = ['build', 'upload', '--json', '--yes', '--no-set-current', '--file', o.filePath];
+  args.push('--platform', o.platform);
+  if (o.appId) args.push('--app', o.appId);
+  if (o.version) args.push('--version', o.version);
+  return args;
 }
 
 export function deviceKillAppArgs(target: SessionTarget): string[] {
@@ -353,6 +380,36 @@ export function parseAuthStatus(res: CliResult): AuthStatus {
       ? `Authenticated as ${email ?? 'unknown user'}${org ? ` (org: ${org})` : ''}.`
       : 'Not authenticated. Run `revyl auth login`, or set REVYL_API_KEY.',
   };
+}
+
+export interface UploadedBuildInfo {
+  buildId: string;
+  version?: string;
+}
+
+/**
+ * `build upload --json` has moved its id around across CLI versions, and a
+ * build id is the one thing the install step cannot do without — so every
+ * shape that has appeared is accepted, at the top level or one nesting down.
+ */
+export function parseUploadedBuild(res: CliResult): UploadedBuildInfo | undefined {
+  const json = rec(parseJson(res));
+  if (!json) return undefined;
+
+  const holders = [json, rec(json.version), rec(json.build), rec(json.build_version), rec(json.data)];
+  for (const holder of holders) {
+    if (!holder) continue;
+    const buildId =
+      str(holder.build_version_id) ??
+      str(holder.buildVersionId) ??
+      str(holder.build_id) ??
+      str(holder.buildId) ??
+      str(holder.id);
+    if (!buildId) continue;
+    const version = str(holder.version) ?? str(json.version);
+    return { buildId, ...(version ? { version } : {}) };
+  }
+  return undefined;
 }
 
 /** The session envelope returned by `device start` / `device info` / `device list`. */

@@ -1,0 +1,30 @@
+{
+  "name": "@mobile-bisect/native-runner",
+  "version": "0.1.0",
+  "description": "Framework adapters that compile a native binary per candidate commit: Xcode (Swift/Objective-C) and Gradle (Kotlin/Java).",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist tsconfig.tsbuildinfo",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@mobile-bisect/core": "*"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

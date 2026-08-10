@@ -1,11 +1,13 @@
 /**
- * Shared contract for every expo-bisect package.
+ * Shared contract for every mobile-bisect package.
  *
  * This file is the single source of truth. `core` owns the bisection state
- * machine, `revyl-runner`/`expo-runner` implement the runtime interfaces, and
- * `report` renders the event stream. Nothing here may import from another
- * package.
+ * machine, the runner packages implement the runtime interfaces, the framework
+ * adapters implement `adapter.ts`, and `report` renders the event stream.
+ * Nothing here may import from another package.
  */
+
+export type Platform = 'ios' | 'android';
 
 // ---------------------------------------------------------------------------
 // Commits
@@ -83,7 +85,7 @@ export interface FlowDefinition {
 // ---------------------------------------------------------------------------
 
 export interface StartSessionInput {
-  platform: 'ios' | 'android';
+  platform: Platform;
   deviceModel?: string;
   osVersion?: string;
   /** Existing session to reuse instead of starting a new one. */
@@ -103,8 +105,30 @@ export interface LaunchInput {
   /** Where the candidate JS bundle is being served or exported from. */
   bundleUrl?: string;
   buildId?: string;
+  /**
+   * A locally built artifact for this candidate (.app.zip / .apk / .ipa). Set
+   * by adapters that compile a binary per commit; the runner uploads it and
+   * installs the result. Ignored when `buildId` is already known.
+   */
+  appPath?: string;
+  /** Launched after install when there is no bundle URL to navigate to. */
+  bundleId?: string;
   /** Reset app data before launch so every candidate starts identically. */
   resetState?: boolean;
+}
+
+export interface UploadBuildInput {
+  /** Local path to the artifact. */
+  appPath: string;
+  platform: Platform;
+  /** Version label for the uploaded build; the candidate SHA is a good one. */
+  version?: string;
+}
+
+export interface UploadedBuild {
+  /** What `installOrLaunch` and `startSession` take as `buildId`. */
+  buildId: string;
+  version?: string;
 }
 
 export interface RunFlowInput {
@@ -133,6 +157,11 @@ export interface MobileRuntimeRunner {
   runFlow(input: RunFlowInput): Promise<RunResult>;
   collectArtifacts(runId: string): Promise<Artifacts>;
   stopSession(sessionId: string): Promise<void>;
+  /**
+   * Optional: only adapters that compile a binary per commit need it. A runner
+   * without this can still serve every bundle-swapping framework.
+   */
+  uploadBuild?(input: UploadBuildInput): Promise<UploadedBuild>;
 }
 
 // ---------------------------------------------------------------------------

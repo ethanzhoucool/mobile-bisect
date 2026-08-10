@@ -9,7 +9,7 @@ import { git, latestRunDir, makeRepo, readEvents, runCli } from './helpers.js';
 
 const CULPRIT_INDEX = 41;
 
-describe('expo-bisect run --dry-run', () => {
+describe('mobile-bisect run --dry-run', () => {
   it(
     'searches 64 commits end to end and names the culprit',
     async () => {

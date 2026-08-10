@@ -14,7 +14,7 @@ import type {
   BisectMeta,
   CommitResult,
   CommitSummary,
-} from '@expo-bisect/core';
+} from '@mobile-bisect/core';
 import { bracketLine, collapse, RAIL_CHARS, type RailCellState } from './rail.js';
 import type { EventSink } from './sink.js';
 
@@ -180,14 +180,14 @@ export class LiveSink implements EventSink {
     if (this.meta) {
       const m = this.meta;
       out.push(
-        `  ${pc.bold('expo-bisect')}  ${pc.cyan(m.goodRef)} ${pc.dim('→')} ${pc.cyan(m.badRef)}  ` +
+        `  ${pc.bold('mobile-bisect')}  ${pc.cyan(m.goodRef)} ${pc.dim('→')} ${pc.cyan(m.badRef)}  ` +
           pc.dim(
             `${m.flowName} · ${m.totalCommits} commits · ${m.plannedRounds} rounds · ${m.runId}`,
           ),
       );
       out.push(`  ${pc.dim('expect')}  ${truncate(`"${m.expect}"`, inner - 9)}`);
     } else {
-      out.push(`  ${pc.bold('expo-bisect')}  ${pc.dim('starting…')}`);
+      out.push(`  ${pc.bold('mobile-bisect')}  ${pc.dim('starting…')}`);
       out.push('');
     }
 

@@ -1,4 +1,4 @@
-/** Compile-time shim for `@expo-bisect/report`. See src/shims/core.d.ts. */
+/** Compile-time shim for `@mobile-bisect/report`. See src/shims/core.d.ts. */
 
 export declare function serve(opts: {
   runDir: string;

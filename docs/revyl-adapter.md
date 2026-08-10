@@ -1,11 +1,12 @@
 # The Revyl adapter
 
-`expo-bisect` needs one thing from a mobile runtime: *run this flow against this
+`mobile-bisect` needs one thing from a mobile runtime: *run this flow against this
 build and tell me whether the assertion held.* That contract is
 `MobileRuntimeRunner` in `packages/core/src/types.ts` — five methods, no vendor
-in sight.
+in sight, plus an optional sixth (`uploadBuild`) for the adapters that compile a
+binary per candidate.
 
-`@expo-bisect/revyl-runner` is the implementation that talks to
+`@mobile-bisect/revyl-runner` is the implementation that talks to
 [Revyl](https://revyl.ai). This document explains what it uses, why, and how to
 replace it.
 
@@ -40,22 +41,43 @@ at a time. That is what this adapter uses, because a bisect needs to:
 `revyl dev` was considered and rejected. It is an excellent interactive loop —
 it owns Metro startup, relay creation, dev-client install and the deep link —
 but it is a long-lived foreground process bound to one worktree, and a bisect
-wants N short-lived candidates against one device. `expo-runner` does the Metro
-half itself and hands this adapter a URL; the adapter does the device half. The
+wants N short-lived candidates against one device. The `expo` adapter does the
+Metro half itself and hands this adapter a URL; the adapter does the device half. The
 `revyl dev --tunnel '<dev-client link>'` flag is the supported seam for the same
 idea and remains available if you would rather Revyl owned the relay.
 
-### The core move
+### The core move, and the honest alternative
 
-The dev-client build is installed **once**. For each candidate:
+There are two ways a candidate reaches the device, matching the two kinds of
+`PreparedCandidate` (see [`framework-adapters.md`](framework-adapters.md)).
+
+**Bundle candidates.** The dev-client build is installed **once**. For each
+candidate:
 
 ```
 revyl device navigate --url "exp+<scheme>://expo-development-client/?url=<metro>"
 ```
 
 The dev client fetches that candidate's bundle over the relay. No `eas build`,
-no reinstall, no 15-minute native compile per commit. This is why a 64-commit
-bisect finishes in the time one native build would take.
+no reinstall, no 15-minute native compile per commit. This is why an Expo
+64-commit bisect finishes in the time one native build would take.
+
+**Binary candidates.** A Swift or Kotlin commit has no such shortcut — the
+change *is* native. The adapter compiles it, and this adapter registers the
+result:
+
+```
+revyl build upload --json --yes --no-set-current \
+    --file <artifact> --platform ios --version <shortSha>
+revyl device install --json --build-version-id <BUILD_ID> -s <i>
+```
+
+`--no-set-current` is load-bearing. A bisect uploads one build per candidate,
+and promoting each one would leave the app's current version pointing at
+whichever commit the search happened to test last.
+
+The build id comes back to the adapter via `noteUploaded`, so a resumed run
+installs the same binary instead of compiling and uploading it again.
 
 ---
 
@@ -76,6 +98,7 @@ Per candidate:
 
 ```
 revyl device list --json                                            # resolve our index
+revyl build upload --json --file <artifact> ...                     # only for a binary candidate
 revyl device install --json --build-version-id <BUILD_ID> -s <i>    # only if a build is pinned
 revyl device kill-app --json -s <i>                                 # only when resetState
 revyl device navigate --json --url <DEV_CLIENT_DEEP_LINK> -s <i>    # the JS swap
@@ -323,12 +346,20 @@ export interface MobileRuntimeRunner {
   runFlow(input: RunFlowInput): Promise<RunResult>;
   collectArtifacts(runId: string): Promise<Artifacts>;
   stopSession(sessionId: string): Promise<void>;
+
+  /** Optional: only needed for adapters that compile a binary per candidate. */
+  uploadBuild?(input: UploadBuildInput): Promise<UploadedBuild>;
 }
 ```
 
 To target a different device cloud — or a local simulator, or a physical device
 farm — implement those five and hand the instance to the bisector. Nothing in
-`@expo-bisect/core` imports this package.
+`@mobile-bisect/core` imports this package.
+
+Implement `uploadBuild` too if you want the `xcode` or `gradle` adapters to
+work: without it they have an artifact and nowhere to put it, and the CLI says
+so rather than failing mid-search. A runner without it still serves every
+bundle-swapping framework.
 
 What a replacement must get right:
 
@@ -345,7 +376,7 @@ What a replacement must get right:
 5. **Redact.** Everything you emit ends up in `events.jsonl`, `state.json` and
    an HTML report a user may attach to a bug report.
 
-`@expo-bisect/core` ships `FakeRunner`, a complete in-memory implementation that
+`@mobile-bisect/core` ships `FakeRunner`, a complete in-memory implementation that
 needs no cloud, no build and no network. It is the reference for the interface
 and what `--demo` runs on. Read it before writing your own.
 

@@ -2,7 +2,7 @@
  * Orchestration: refs → candidates → run store → bisector → device runs →
  * culprit → diff → diagnosis → report.
  *
- * The loop mirrors `drive()` in @expo-bisect/core's test helpers, because the
+ * The loop mirrors `drive()` in @mobile-bisect/core's test helpers, because the
  * Bisector owns strict invariants: exactly one candidate is active at a time,
  * `markRunning`/`step`/`record` must name that candidate, and an inconclusive
  * result keeps it active for the retry. Two rules of our own shape the rest:
@@ -27,13 +27,16 @@ import {
   type CommitResult,
   type CommitSummary,
   type FlowDefinition,
+  type FrameworkAdapter,
   type MobileRuntimeRunner,
+  type PreparedCandidate,
   type Session,
-} from '@expo-bisect/core';
-import * as git from '@expo-bisect/git';
+} from '@mobile-bisect/core';
+import * as git from '@mobile-bisect/git';
 import { loadReport, loadRunner } from './adapters.js';
-import type { ResumeOptions, RunOptions } from './args.js';
-import { loadConfig, type ExpoBisectConfig } from './config.js';
+import type { FrameworkName, ResumeOptions, RunOptions } from './args.js';
+import { loadConfig, type MobileBisectConfig } from './config.js';
+import { createFakeAdapter, resolveAdapter } from './frameworks.js';
 import { CliError, messageOf } from './errors.js';
 import { findFlowFile, loadFlow } from './flow.js';
 import { redactDeep } from './redact.js';
@@ -41,7 +44,7 @@ import { LiveSink } from './ui/live.js';
 import { JsonSink, PlainSink } from './ui/plain.js';
 import { fanout, type EventSink } from './ui/sink.js';
 
-const TOOL_DIR = '.expo-bisect';
+const TOOL_DIR = '.mobile-bisect';
 
 interface RunSidecar {
   version: 1;
@@ -59,6 +62,8 @@ interface RunSidecar {
   stepDelayMs: number;
   appId?: string;
   buildId?: string;
+  /** Which adapter prepared the candidates, so `resume` uses the same one. */
+  framework?: FrameworkName;
   command: string;
 }
 
@@ -77,7 +82,7 @@ export async function runCommand(opts: RunOptions): Promise<number> {
 
   if (!(await git.isGitRepo(repo))) {
     throw new CliError(`\`${repo}\` is not a git repository.`, {
-      hint: 'expo-bisect walks git history, so run it inside your app repo (or pass --cwd).',
+      hint: 'mobile-bisect walks git history, so run it inside your app repo (or pass --cwd).',
     });
   }
 
@@ -87,7 +92,7 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     } catch (e) {
       throw new CliError(messageOf(e), {
         hint:
-          'expo-bisect never modifies or discards uncommitted work. Commit or stash it, or pass ' +
+          'mobile-bisect never modifies or discards uncommitted work. Commit or stash it, or pass ' +
           '--allow-dirty to leave it exactly where it is while candidates run in detached worktrees.',
       });
     }
@@ -112,6 +117,8 @@ export async function runCommand(opts: RunOptions): Promise<number> {
   const ui = await openUi(opts, store, { port: opts.port, open: opts.open });
 
   const runner = await buildRunner({ opts, commits, flow, config, store });
+  const framework = await buildAdapter({ opts, config, repo, commits, ui });
+
   const sidecar: RunSidecar = {
     version: 1,
     flowPath: flowPath ? path.relative(repo, flowPath) : undefined,
@@ -128,6 +135,7 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     stepDelayMs: opts.stepDelayMs,
     appId: flow.appId ?? config.appId,
     buildId: config.build?.buildId,
+    framework: framework.name,
     command: meta.command,
   };
   await writeFile(
@@ -136,8 +144,101 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     'utf8',
   );
 
-  const engine = new BisectRun({ repo, store, ui, flow, runner: runner.runner, sidecar });
+  const engine = new BisectRun({
+    repo,
+    store,
+    ui,
+    flow,
+    runner: runner.runner,
+    adapter: framework.adapter,
+    sidecar,
+  });
   return engine.start(commits, meta);
+}
+
+/**
+ * Chooses the adapter and lets it veto the range before a device is started.
+ *
+ * The precheck is where an adapter refuses work it cannot answer honestly —
+ * the Expo adapter rejects a range containing native changes, because swapping
+ * JavaScript underneath the wrong binary produces a confident wrong answer.
+ */
+async function buildAdapter(input: {
+  opts: RunOptions;
+  config: MobileBisectConfig;
+  repo: string;
+  commits: CommitSummary[];
+  ui: Ui;
+}): Promise<{ name?: FrameworkName; adapter: FrameworkAdapter }> {
+  const { opts, config, repo, commits, ui } = input;
+
+  if (opts.dryRun) return { adapter: createFakeAdapter() };
+
+  const requested = opts.framework ?? frameworkFromConfig(config);
+  const resolved = await resolveAdapter(requested, {
+    projectRoot: repo,
+    config: withFlagOverrides(config, opts),
+    onLog: (line) => ui.note(pc.dim(`  ${line}`)),
+  });
+
+  if (!resolved.detection.ok) {
+    throw new CliError(
+      `The ${resolved.adapter.displayName} adapter cannot prepare this project.`,
+      { hint: resolved.detection.reason },
+    );
+  }
+  if (!resolved.detection.platforms.includes(opts.platform)) {
+    throw new CliError(
+      `The ${resolved.adapter.displayName} adapter does not build for ${opts.platform}.`,
+      { hint: `It supports: ${resolved.detection.platforms.join(', ') || 'nothing on this project'}.` },
+    );
+  }
+
+  ui.note(
+    pc.dim(`  ${resolved.adapter.displayName}${resolved.detection.summary ? ` — ${resolved.detection.summary}` : ''}`),
+  );
+  if (resolved.adapter.candidateKind === 'binary') {
+    ui.note(
+      pc.dim(
+        `  every candidate is compiled, so expect minutes per round rather than seconds ` +
+          `(${plannedRounds(commits.length)} rounds).`,
+      ),
+    );
+  }
+
+  const precheck = await resolved.adapter.precheck?.({
+    projectPath: repo,
+    goodSha: commits[0]!.sha,
+    badSha: commits[commits.length - 1]!.sha,
+    platform: opts.platform,
+  });
+  if (precheck && !precheck.ok) {
+    throw new CliError(precheck.reason ?? 'This range cannot be bisected with the chosen adapter.');
+  }
+  for (const warning of precheck?.warnings ?? []) ui.note(pc.yellow(`  ${warning}`));
+
+  return { name: resolved.name, adapter: resolved.adapter };
+}
+
+/** ceil(log2(n)) — 64 commits resolve in 6 classification decisions. */
+function plannedRounds(commitCount: number): number {
+  return Math.max(1, Math.ceil(Math.log2(commitCount)));
+}
+
+function frameworkFromConfig(config: MobileBisectConfig): FrameworkName | undefined {
+  const value = config.framework;
+  return value && value !== 'auto' ? value : undefined;
+}
+
+/** A flag beats the config for the same setting; nothing else is touched. */
+function withFlagOverrides(config: MobileBisectConfig, opts: RunOptions): MobileBisectConfig {
+  const build = {
+    ...config.build,
+    ...(opts.scheme ? { scheme: opts.scheme } : {}),
+    ...(opts.variant ? { variant: opts.variant } : {}),
+    ...(opts.projectDir ? { projectDir: opts.projectDir } : {}),
+  };
+  return { ...config, build };
 }
 
 // ---------------------------------------------------------------------------
@@ -151,19 +252,19 @@ export async function resumeCommand(opts: ResumeOptions): Promise<number> {
   const state = await store.loadState();
   if (!state) {
     throw new CliError(`Run \`${store.runId}\` has no saved state to resume from.`, {
-      hint: 'Start a fresh search with `expo-bisect run --good <ref> --bad <ref>`.',
+      hint: 'Start a fresh search with `mobile-bisect run --good <ref> --bad <ref>`.',
     });
   }
   if (state.finishedAt) {
     throw new CliError(`Run \`${store.runId}\` already finished.`, {
-      hint: `See it with \`expo-bisect report ${store.runId}\`.`,
+      hint: `See it with \`mobile-bisect report ${store.runId}\`.`,
     });
   }
 
   const sidecar = await readSidecar(store.dir);
   if (!sidecar) {
     throw new CliError(`Run \`${store.runId}\` is missing run.json, so it can't be resumed.`, {
-      hint: 'Start a fresh search with `expo-bisect run`.',
+      hint: 'Start a fresh search with `mobile-bisect run`.',
     });
   }
 
@@ -183,7 +284,23 @@ export async function resumeCommand(opts: ResumeOptions): Promise<number> {
   // Replay what already happened so the rail picks up where it left off.
   for (const event of await store.readEvents()) ui.handle(event);
 
-  const engine = new BisectRun({ repo, store, ui, flow, runner: runner.runner, sidecar: resumed });
+  const framework = await buildAdapter({
+    opts: { ...toRunOptions(opts, resumed), cwd: opts.cwd } as RunOptions,
+    config,
+    repo,
+    commits: state.commits,
+    ui,
+  });
+
+  const engine = new BisectRun({
+    repo,
+    store,
+    ui,
+    flow,
+    runner: runner.runner,
+    adapter: framework.adapter,
+    sidecar: resumed,
+  });
   return engine.resume(state);
 }
 
@@ -199,8 +316,8 @@ async function pickResumableRun(repo: string, runId?: string): Promise<RunStore>
   throw new CliError('No unfinished run to resume.', {
     hint:
       ids.length > 0
-        ? `Finished runs: ${ids.slice(0, 5).join(', ')}. Open one with \`expo-bisect report <run-id>\`.`
-        : 'Start one with `expo-bisect run --good <ref> --bad <ref>`.',
+        ? `Finished runs: ${ids.slice(0, 5).join(', ')}. Open one with \`mobile-bisect report <run-id>\`.`
+        : 'Start one with `mobile-bisect run --good <ref> --bad <ref>`.',
   });
 }
 
@@ -214,6 +331,7 @@ class BisectRun {
   private readonly ui: Ui;
   private readonly flow: FlowDefinition;
   private readonly runner: MobileRuntimeRunner;
+  private readonly adapter: FrameworkAdapter;
   private readonly sidecar: RunSidecar;
   private readonly policy = new RetryPolicy({ maxAttempts: 2 });
 
@@ -236,6 +354,7 @@ class BisectRun {
     ui: Ui;
     flow: FlowDefinition;
     runner: MobileRuntimeRunner;
+    adapter: FrameworkAdapter;
     sidecar: RunSidecar;
   }) {
     this.repo = deps.repo;
@@ -243,6 +362,7 @@ class BisectRun {
     this.ui = deps.ui;
     this.flow = deps.flow;
     this.runner = deps.runner;
+    this.adapter = deps.adapter;
     this.sidecar = deps.sidecar;
   }
 
@@ -341,10 +461,19 @@ class BisectRun {
     const started = Date.now();
     let worktree: git.Worktree | undefined;
     let session: Session | undefined;
+    let candidate: PreparedCandidate | undefined;
 
     try {
       worktree = await git.createWorktree(this.repo, commit.sha);
       this.worktrees.add(worktree);
+
+      // Preparation comes first and can be the expensive half: a JS swap is
+      // seconds, a native build is minutes. Doing it before the device is
+      // started means a failed build never burns cloud device time.
+      candidate = await this.adapter.prepare(commit.sha, worktree.path, {
+        platform: this.sidecar.platform,
+        onLog: (line) => this.ui.note(pc.dim(`  ${line}`)),
+      });
 
       session = await this.openSession(commit.sha);
       this.sessions.add(session.sessionId);
@@ -352,12 +481,7 @@ class BisectRun {
       if (active) this.bisector.markRunning(commit.sha, running);
       else this.emit({ type: 'commit.running', at: nowIso(), sha: commit.sha, ...running });
 
-      await this.runner.installOrLaunch({
-        sessionId: session.sessionId,
-        bundleUrl: worktree.path,
-        buildId: commit.sha,
-        resetState: true,
-      });
+      await this.launch(session.sessionId, commit, candidate);
 
       const total = this.flow.steps.length;
       const outcome = await this.policy.run(async (attempt) => {
@@ -420,8 +544,58 @@ class BisectRun {
         attempt: 1,
       };
     } finally {
+      await candidate?.dispose().catch(() => {});
       await this.release(worktree, session?.sessionId);
     }
+  }
+
+  /**
+   * Hands the prepared candidate to the device.
+   *
+   * A bundle candidate is a URL the dev client opens. A binary candidate is an
+   * artifact the runtime has to ingest first; the resulting build id goes back
+   * to the adapter so a resumed run installs the same binary instead of
+   * compiling and uploading it a second time.
+   */
+  private async launch(
+    sessionId: string,
+    commit: CommitSummary,
+    candidate: PreparedCandidate,
+  ): Promise<void> {
+    if (candidate.kind === 'bundle') {
+      await this.runner.installOrLaunch({
+        sessionId,
+        bundleUrl: candidate.bundleUrl,
+        buildId: commit.sha,
+        resetState: true,
+      });
+      return;
+    }
+
+    let buildId = candidate.buildId;
+    if (!buildId && candidate.appPath) {
+      if (!this.runner.uploadBuild) {
+        throw new CliError(
+          `The ${this.adapter.displayName} adapter builds a binary per commit, but this runtime cannot upload one.`,
+          { hint: 'Use a bundle-swapping framework, or a runner that implements uploadBuild.' },
+        );
+      }
+      const uploaded = await this.runner.uploadBuild({
+        appPath: candidate.appPath,
+        platform: candidate.platform,
+        version: commit.shortSha,
+      });
+      buildId = uploaded.buildId;
+      await this.adapter.noteUploaded?.(commit.sha, buildId, candidate.platform).catch(() => {});
+    }
+
+    await this.runner.installOrLaunch({
+      sessionId,
+      ...(buildId ? { buildId } : {}),
+      ...(candidate.appPath ? { appPath: candidate.appPath } : {}),
+      ...(candidate.bundleId ? { bundleId: candidate.bundleId } : {}),
+      resetState: true,
+    });
   }
 
   /**
@@ -630,7 +804,7 @@ class BisectRun {
     await this.appendQueue;
     await this.ui.close();
     process.stdout.write(
-      `\n  Resume where you left off:\n    ${pc.cyan(`expo-bisect resume ${this.store.runId}`)}\n\n`,
+      `\n  Resume where you left off:\n    ${pc.cyan(`mobile-bisect resume ${this.store.runId}`)}\n\n`,
     );
     process.exit(130);
   }
@@ -644,6 +818,9 @@ class BisectRun {
       this.worktrees.delete(worktree);
       await worktree.cleanup().catch(() => {});
     }
+    // Metro servers, allocated ports and any shared build state the adapter is
+    // holding. Cached artifacts survive on purpose — a resume wants them.
+    await this.adapter.dispose?.().catch(() => {});
     await git.cleanupAllWorktrees(this.repo).catch(() => {});
   }
 }
@@ -679,7 +856,7 @@ function boundaryResult(
 async function enumerateCommits(
   repo: string,
   opts: RunOptions,
-  config: ExpoBisectConfig,
+  config: MobileBisectConfig,
 ): Promise<CommitSummary[]> {
   let commits: CommitSummary[];
   try {
@@ -718,7 +895,7 @@ function buildMeta(input: {
 }): BisectMeta {
   const { opts, flow, flowPath, expect, commits, repo } = input;
   const parts = [
-    'npx expo-bisect run',
+    'npx mobile-bisect run',
     `--good ${opts.good}`,
     `--bad ${opts.bad}`,
     flowPath ? `--flow ${path.relative(repo, flowPath) || flowPath}` : '',
@@ -737,7 +914,7 @@ function buildMeta(input: {
     badRef: opts.bad,
     expect,
     totalCommits: commits.length,
-    plannedRounds: Math.max(1, Math.ceil(Math.log2(commits.length))),
+    plannedRounds: plannedRounds(commits.length),
   };
 }
 
@@ -764,6 +941,8 @@ function toRunOptions(opts: ResumeOptions, sidecar: RunSidecar): Partial<RunOpti
     culprit: sidecar.culpritSha,
     flaky: sidecar.flakySha,
     stepDelayMs: sidecar.stepDelayMs,
+    // Resuming with a different adapter would mix candidate kinds mid-search.
+    framework: sidecar.framework,
   };
 }
 
@@ -771,7 +950,7 @@ async function buildRunner(input: {
   opts: RunOptions;
   commits: CommitSummary[];
   flow: FlowDefinition;
-  config: ExpoBisectConfig;
+  config: MobileBisectConfig;
   store: RunStore;
 }): Promise<{ runner: MobileRuntimeRunner; culpritSha?: string; flakySha?: string }> {
   const { opts, commits, flow, config, store } = input;
@@ -900,7 +1079,7 @@ async function resolveFlowPath(
   if (found) return found;
   if (dryRun) return undefined;
   throw new CliError('No flow file found.', {
-    hint: 'Point at one with --flow flows/checkout.yaml, or run `expo-bisect init` to scaffold one.',
+    hint: 'Point at one with --flow flows/checkout.yaml, or run `mobile-bisect init` to scaffold one.',
     exitCode: 2,
   });
 }

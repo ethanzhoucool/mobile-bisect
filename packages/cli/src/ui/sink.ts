@@ -1,4 +1,4 @@
-import type { BisectEvent } from '@expo-bisect/core';
+import type { BisectEvent } from '@mobile-bisect/core';
 
 /** Anything that can watch a run: the live view, plain logs, the SSE server. */
 export interface EventSink {

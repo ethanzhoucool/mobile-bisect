@@ -13,7 +13,7 @@ import type { BisectEvent, BisectState } from './types.js';
 const tmpdirs: string[] = [];
 
 async function sandbox(): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'expo-bisect-store-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-store-'));
   tmpdirs.push(dir);
   return dir;
 }
@@ -32,10 +32,10 @@ const evt = (n: number): BisectEvent => ({
 });
 
 describe('RunStore', () => {
-  it('lays out .expo-bisect/runs/<id>/{events.jsonl,artifacts}', async () => {
+  it('lays out .mobile-bisect/runs/<id>/{events.jsonl,artifacts}', async () => {
     const cwd = await sandbox();
     const store = await RunStore.create(cwd, 'run-1');
-    expect(store.dir).toBe(path.join(cwd, '.expo-bisect', 'runs', 'run-1'));
+    expect(store.dir).toBe(path.join(cwd, '.mobile-bisect', 'runs', 'run-1'));
     expect(store.artifactsDir).toBe(path.join(store.dir, 'artifacts'));
     expect(store.runId).toBe('run-1');
     await expect(fs.stat(store.artifactsDir)).resolves.toBeTruthy();

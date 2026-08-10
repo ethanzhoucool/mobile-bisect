@@ -17,7 +17,9 @@ import type {
   RunResult,
   Session,
   StartSessionInput,
-} from '@expo-bisect/core';
+  UploadBuildInput,
+  UploadedBuild,
+} from '@mobile-bisect/core';
 import * as cli from './cli-adapter.js';
 import { classify, isInfraFailure } from './classify.js';
 import { downloadAll, type FetchLike } from './download.js';
@@ -63,6 +65,8 @@ export interface RevylRunnerOptions {
   downloadConcurrency?: number;
   /** Per-download budget so a hung fetch cannot wedge the search. Default 20s. */
   artifactTimeoutMs?: number;
+  /** Budget for one `build upload`. A 200 MB simulator app is slow. Default 10 min. */
+  uploadTimeoutMs?: number;
   /** Device idle timeout in seconds. Default 900. */
   idleTimeoutSec?: number;
   /**
@@ -89,6 +93,8 @@ interface SessionState {
   viewerUrl?: string;
   deviceModel: string;
   osVersion: string;
+  /** What the session was started for; decides how an uploaded build is tagged. */
+  platform?: 'ios' | 'android';
 }
 
 interface RunState {
@@ -150,10 +156,45 @@ export class RevylRunner implements MobileRuntimeRunner {
       ...(info.viewerUrl ? { viewerUrl: info.viewerUrl } : {}),
       deviceModel: deviceModel ?? 'unknown',
       osVersion: osVersion ?? 'unknown',
+      platform,
     };
     this.sessions.set(state.sessionId, state);
     if (this.opts.reuseSession) this.reusable = state;
     return toSession(state);
+  }
+
+  /**
+   * Registers a locally built artifact and returns the id that installs it.
+   *
+   * The native adapters compile a binary per candidate; this is where that
+   * binary becomes something a cloud device can run. Bundle-swapping adapters
+   * never call it.
+   */
+  async uploadBuild(input: UploadBuildInput): Promise<UploadedBuild> {
+    const exec = await this.exec();
+    const res = await exec(
+      cli.buildUploadArgs({
+        filePath: input.appPath,
+        platform: input.platform,
+        ...(this.opts.appId ? { appId: this.opts.appId } : {}),
+        ...(input.version ? { version: input.version } : {}),
+      }),
+      { timeoutMs: this.opts.uploadTimeoutMs ?? 600_000 },
+    );
+    if (res.code !== 0) {
+      throw infraFrom(res, 'build-upload', 'Could not upload the candidate build to Revyl');
+    }
+
+    const parsed = cli.parseUploadedBuild(res);
+    if (!parsed) {
+      throw infraFrom(
+        res,
+        'build-upload',
+        'Revyl accepted the build but returned no build id, so it cannot be installed',
+      );
+    }
+    this.opts.onLog?.(`uploaded ${input.version ?? input.appPath} -> build ${parsed.buildId}`);
+    return parsed;
   }
 
   async installOrLaunch(input: LaunchInput): Promise<void> {
@@ -161,14 +202,27 @@ export class RevylRunner implements MobileRuntimeRunner {
     const state = await this.requireSession(exec, input.sessionId);
     const target = { index: state.index };
 
-    const buildId = input.buildId ?? this.opts.buildId;
+    // A caller that hands over a raw artifact gets it uploaded first: without
+    // an id there is nothing for `device install` to reference.
+    let uploaded: string | undefined;
+    if (!input.buildId && input.appPath) {
+      const built = await this.uploadBuild({
+        appPath: input.appPath,
+        platform: state.platform ?? this.opts.platform ?? 'ios',
+        ...(input.buildId ? { version: input.buildId } : {}),
+      });
+      uploaded = built.buildId;
+    }
+
+    const buildId = input.buildId ?? uploaded ?? this.opts.buildId;
+    const bundleId = input.bundleId ?? this.opts.bundleId;
     if (buildId || this.opts.appId) {
       const res = await exec(
         cli.deviceInstallArgs(
           {
             ...(buildId ? { buildId } : {}),
             ...(this.opts.appId ? { appId: this.opts.appId } : {}),
-            ...(this.opts.bundleId ? { bundleId: this.opts.bundleId } : {}),
+            ...(bundleId ? { bundleId } : {}),
           },
           target,
         ),
@@ -188,12 +242,15 @@ export class RevylRunner implements MobileRuntimeRunner {
       if (res.code !== 0) {
         throw infraFrom(res, 'bundle-load', 'Could not point the dev client at the candidate bundle');
       }
-    } else if (this.opts.bundleId) {
-      const res = await exec(cli.deviceLaunchArgs(this.opts.bundleId, target), { timeoutMs: 120_000 });
+    } else if (bundleId) {
+      const res = await exec(cli.deviceLaunchArgs(bundleId, target), { timeoutMs: 120_000 });
       if (res.code !== 0) throw infraFrom(res, 'launch', 'Could not launch the app');
     }
 
-    await this.assertBundleLoaded(exec, target);
+    // The error-screen check looks for a bundler failure, which only a JS
+    // candidate can have. A native binary that failed to compile never got
+    // here, so running it would only cost a screenshot and a model call.
+    if (input.bundleUrl) await this.assertBundleLoaded(exec, target);
   }
 
   async runFlow(input: RunFlowInput): Promise<RunResult> {

@@ -48,7 +48,7 @@ describe('interrupting a run', () => {
       expect(first.code).toBe(130);
       expect(first.stdout).toContain('interrupted');
       expect(first.stdout).toMatch(/Resume where you left off/);
-      expect(first.stdout).toMatch(/expo-bisect resume \S+/);
+      expect(first.stdout).toMatch(/mobile-bisect resume \S+/);
 
       // nothing of ours is left behind
       expect(await git(dir, ['status', '--porcelain'])).toBe('');

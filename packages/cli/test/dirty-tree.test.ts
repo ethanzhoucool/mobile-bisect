@@ -1,5 +1,5 @@
 /**
- * The promise that matters most: expo-bisect never touches uncommitted work.
+ * The promise that matters most: mobile-bisect never touches uncommitted work.
  */
 
 import { readFile, writeFile } from 'node:fs/promises';

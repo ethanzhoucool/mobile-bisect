@@ -4,13 +4,13 @@
  * The schema is deliberately thin: we own `name` / `appId` / `expect` / `steps`
  * and each step's `label`, and every other key inside a step is passed to the
  * runner untouched. That keeps the file readable in the report ("Tap Place
- * order") without expo-bisect having an opinion about Revyl's step vocabulary.
+ * order") without mobile-bisect having an opinion about Revyl's step vocabulary.
  */
 
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { LineCounter, isMap, isSeq, parseDocument, type Node, type Pair } from 'yaml';
-import type { FlowDefinition, FlowStep } from '@expo-bisect/core';
+import type { FlowDefinition, FlowStep } from '@mobile-bisect/core';
 import { CliError } from './errors.js';
 
 const ROOT_KEYS = ['name', 'appId', 'expect', 'steps', 'description'];
@@ -173,7 +173,7 @@ export async function loadFlow(filePath: string): Promise<FlowDefinition> {
     source = await readFile(filePath, 'utf8');
   } catch {
     throw new CliError(`Can't read the flow file \`${filePath}\`.`, {
-      hint: 'Pass a path with `--flow`, or run `expo-bisect init` to scaffold one.',
+      hint: 'Pass a path with `--flow`, or run `mobile-bisect init` to scaffold one.',
       exitCode: 2,
     });
   }
@@ -182,12 +182,12 @@ export async function loadFlow(filePath: string): Promise<FlowDefinition> {
 
 /** Where a flow tends to live, in the order we would guess. */
 const FLOW_HINTS = [
-  'expo-bisect.flow.yaml',
+  'mobile-bisect.flow.yaml',
   'flows/checkout.yaml',
   'flows/checkout.yml',
-  '.expo-bisect/flow.yaml',
+  '.mobile-bisect/flow.yaml',
 ];
-const FLOW_DIRS = ['flows', '.expo-bisect/flows', 'e2e/flows', 'e2e', 'tests/flows'];
+const FLOW_DIRS = ['flows', '.mobile-bisect/flows', 'e2e/flows', 'e2e', 'tests/flows'];
 
 export async function findFlowFile(cwd: string): Promise<string | undefined> {
   for (const hint of FLOW_HINTS) {

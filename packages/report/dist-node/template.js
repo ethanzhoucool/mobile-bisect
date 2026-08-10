@@ -12,7 +12,7 @@ export function templatePath() {
     for (const c of candidates)
         if (existsSync(c))
             return resolve(c);
-    throw new Error(`@expo-bisect/report: app bundle not found. Run "npm run build:app" in packages/report first (looked in ${candidates.join(', ')}).`);
+    throw new Error(`@mobile-bisect/report: app bundle not found. Run "npm run build:app" in packages/report first (looked in ${candidates.join(', ')}).`);
 }
 /** Safe to embed inside <script type="application/json">. */
 export function inlineJson(value) {
@@ -24,8 +24,8 @@ export function inlineJson(value) {
 export async function renderHtml({ events, config, frames }) {
     const html = await readFile(templatePath(), 'utf8');
     return html
-        .replace('"__EXPO_BISECT_CONFIG__"', inlineJson(config))
-        .replace('"__EXPO_BISECT_FRAMES__"', inlineJson(frames ?? {}))
-        .replace('"__EXPO_BISECT_EVENTS__"', inlineJson(events));
+        .replace('"__MOBILE_BISECT_CONFIG__"', inlineJson(config))
+        .replace('"__MOBILE_BISECT_FRAMES__"', inlineJson(frames ?? {}))
+        .replace('"__MOBILE_BISECT_EVENTS__"', inlineJson(events));
 }
 //# sourceMappingURL=template.js.map

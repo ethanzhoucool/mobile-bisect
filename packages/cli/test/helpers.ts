@@ -12,7 +12,7 @@ export const EXAMPLE_FLOW = fileURLToPath(
   new URL('../examples/flows/checkout.yaml', import.meta.url),
 );
 
-export async function tempDir(prefix = 'expo-bisect-test-'): Promise<string> {
+export async function tempDir(prefix = 'mobile-bisect-test-'): Promise<string> {
   return mkdtemp(path.join(tmpdir(), prefix));
 }
 
@@ -128,7 +128,7 @@ export async function readEvents(runDir: string): Promise<Record<string, unknown
 }
 
 export async function latestRunDir(repo: string): Promise<string> {
-  const runs = path.join(repo, '.expo-bisect', 'runs');
+  const runs = path.join(repo, '.mobile-bisect', 'runs');
   const { readdir } = await import('node:fs/promises');
   const entries = (await readdir(runs)).sort();
   return path.join(runs, entries[entries.length - 1]!);

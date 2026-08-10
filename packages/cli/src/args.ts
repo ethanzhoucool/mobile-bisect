@@ -8,6 +8,9 @@
 
 import { CliError } from './errors.js';
 
+/** Kept in step with FRAMEWORK_NAMES in frameworks.ts, which owns the aliases. */
+export type FrameworkName = 'expo' | 'xcode' | 'gradle';
+
 export type Command = 'init' | 'run' | 'resume' | 'report' | 'replay' | 'help' | 'version';
 
 export interface CommonOptions {
@@ -23,6 +26,14 @@ export interface RunOptions extends CommonOptions {
   deviceModel?: string;
   osVersion?: string;
   platform: 'ios' | 'android';
+  /** Which framework adapter prepares candidates. Undefined = detect. */
+  framework?: FrameworkName;
+  /** Xcode: the scheme to build. Overrides `build.scheme`. */
+  scheme?: string;
+  /** Gradle: the variant to assemble. Overrides `build.variant`. */
+  variant?: string;
+  /** Subdirectory holding the native project. Overrides `build.projectDir`. */
+  projectDir?: string;
   concurrency: number;
   maxCandidates: number;
   timeoutMs: number;
@@ -158,7 +169,7 @@ function tokenize(argv: string[]): RawArgs {
     if (arg.startsWith('-') && arg.length > 1) {
       const short = arg.slice(1);
       const expanded = SHORT_FLAGS[short];
-      if (!expanded) throw new CliError(`Unknown option \`-${short}\`.`, { hint: 'Run `expo-bisect --help`.', exitCode: 2 });
+      if (!expanded) throw new CliError(`Unknown option \`-${short}\`.`, { hint: 'Run `mobile-bisect --help`.', exitCode: 2 });
       flags.set(expanded, true);
       continue;
     }
@@ -177,7 +188,7 @@ const SHORT_FLAGS: Record<string, string> = {
 
 function assertNotSecret(name: string): void {
   if (!SECRET_FLAGS.includes(name.toLowerCase())) return;
-  throw new CliError(`expo-bisect never accepts credentials on the command line (\`--${name}\`).`, {
+  throw new CliError(`mobile-bisect never accepts credentials on the command line (\`--${name}\`).`, {
     hint: 'Authenticate with the Revyl CLI, or export REVYL_API_KEY in your environment.',
     exitCode: 2,
   });
@@ -188,6 +199,7 @@ const KNOWN_FLAGS: Record<Command, string[]> = {
     'good', 'bad', 'flow', 'expect', 'device-model', 'os-version', 'platform', 'concurrency',
     'max-candidates', 'timeout', 'allow-dirty', 'dry-run', 'port', 'ui', 'json', 'open',
     'culprit', 'flaky', 'step-delay', 'cwd', 'help', 'color',
+    'framework', 'scheme', 'variant', 'project-dir',
   ],
   resume: ['cwd', 'dry-run', 'port', 'ui', 'json', 'open', 'flow', 'help', 'color'],
   init: ['cwd', 'yes', 'force', 'flow', 'help', 'color'],
@@ -202,10 +214,10 @@ function assertKnownFlags(command: Command, flags: Map<string, string | boolean>
   for (const name of flags.keys()) {
     if (known.includes(name) || name === 'version') continue;
     const suggestion = nearest(name, known);
-    throw new CliError(`Unknown option \`--${name}\` for \`expo-bisect ${command}\`.`, {
+    throw new CliError(`Unknown option \`--${name}\` for \`mobile-bisect ${command}\`.`, {
       hint: suggestion
         ? `Did you mean \`--${suggestion}\`?`
-        : `Run \`expo-bisect ${command} --help\` for the supported options.`,
+        : `Run \`mobile-bisect ${command} --help\` for the supported options.`,
       exitCode: 2,
     });
   }
@@ -281,6 +293,36 @@ function int(
   return n;
 }
 
+/**
+ * Accepts the platform words people actually type. `--framework ios` meaning
+ * "build it with Xcode" is the obvious reading, and refusing it to insist on
+ * the tool's name would be pedantry.
+ */
+const FRAMEWORK_ALIASES: Record<string, FrameworkName> = {
+  expo: 'expo',
+  xcode: 'xcode',
+  gradle: 'gradle',
+  ios: 'xcode',
+  swift: 'xcode',
+  swiftui: 'xcode',
+  objc: 'xcode',
+  android: 'gradle',
+  kotlin: 'gradle',
+  java: 'gradle',
+  'react-native': 'expo',
+  rn: 'expo',
+};
+
+function frameworkName(value: string | undefined): FrameworkName | undefined {
+  if (value === undefined || value.toLowerCase() === 'auto') return undefined;
+  const resolved = FRAMEWORK_ALIASES[value.toLowerCase()];
+  if (resolved) return resolved;
+  throw new CliError(`\`--framework\` must be expo, xcode or gradle (got \`${value}\`).`, {
+    hint: 'Aliases: ios/swift -> xcode, android/kotlin -> gradle. Omit it to detect automatically.',
+    exitCode: 2,
+  });
+}
+
 // --- entry point -----------------------------------------------------------
 
 export function parseArgs(argv: string[], cwd = process.cwd()): ParsedArgs {
@@ -295,7 +337,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): ParsedArgs {
   if (!COMMANDS.includes(first as Command)) {
     const suggestion = nearest(first, COMMANDS);
     throw new CliError(`Unknown command \`${first}\`.`, {
-      hint: suggestion ? `Did you mean \`expo-bisect ${suggestion}\`?` : 'Run `expo-bisect --help`.',
+      hint: suggestion ? `Did you mean \`mobile-bisect ${suggestion}\`?` : 'Run `mobile-bisect --help`.',
       exitCode: 2,
     });
   }
@@ -330,8 +372,8 @@ export function parseArgs(argv: string[], cwd = process.cwd()): ParsedArgs {
       const good = str(flags, 'good');
       const bad = str(flags, 'bad');
       if (!good || !bad) {
-        throw new CliError('`expo-bisect run` needs both `--good <ref>` and `--bad <ref>`.', {
-          hint: 'e.g. expo-bisect run --good v1.4.0 --bad HEAD --flow flows/checkout.yaml',
+        throw new CliError('`mobile-bisect run` needs both `--good <ref>` and `--bad <ref>`.', {
+          hint: 'e.g. mobile-bisect run --good v1.4.0 --bad HEAD --flow flows/checkout.yaml',
           exitCode: 2,
         });
       }
@@ -351,6 +393,10 @@ export function parseArgs(argv: string[], cwd = process.cwd()): ParsedArgs {
         deviceModel: str(flags, 'device-model'),
         osVersion: str(flags, 'os-version'),
         platform,
+        framework: frameworkName(str(flags, 'framework')),
+        scheme: str(flags, 'scheme'),
+        variant: str(flags, 'variant'),
+        projectDir: str(flags, 'project-dir'),
         concurrency: int(flags, 'concurrency', 1, { min: 1, max: 8 }),
         maxCandidates: int(flags, 'max-candidates', 64, { min: 2, max: 4096 }),
         timeoutMs: int(flags, 'timeout', 600, { min: 5, max: 86_400 }) * 1000,
@@ -395,8 +441,8 @@ export function parseArgs(argv: string[], cwd = process.cwd()): ParsedArgs {
     case 'replay': {
       const fixture = rest[0];
       if (!fixture) {
-        throw new CliError('`expo-bisect replay` needs a path to an events.jsonl fixture.', {
-          hint: 'e.g. expo-bisect replay fixtures/demo-runs/orbit-checkout.jsonl',
+        throw new CliError('`mobile-bisect replay` needs a path to an events.jsonl fixture.', {
+          hint: 'e.g. mobile-bisect replay fixtures/demo-runs/orbit-checkout.jsonl',
           exitCode: 2,
         });
       }
@@ -421,13 +467,13 @@ export function parseArgs(argv: string[], cwd = process.cwd()): ParsedArgs {
 
 // --- help ------------------------------------------------------------------
 
-const MAIN_HELP = `expo-bisect — git bisect for visual mobile regressions
+const MAIN_HELP = `mobile-bisect — git bisect for visual mobile regressions
 
 USAGE
-  expo-bisect <command> [options]
+  mobile-bisect <command> [options]
 
 COMMANDS
-  init                    Check the project, verify Revyl auth, write expo-bisect.config.ts
+  init                    Check the project, verify Revyl auth, write mobile-bisect.config.ts
   run                     Binary-search history for the commit that broke a flow
   resume [run-id]         Continue the latest unfinished run, or a named one
   report [run-id]         Render the static HTML report and open it
@@ -441,6 +487,10 @@ RUN OPTIONS
   --device-model <name>     Cloud device model, e.g. "iPhone 15 Pro"
   --os-version <version>    Cloud device OS version, e.g. "17.5"
   --platform <ios|android>  Defaults to ios
+  --framework <name>        expo | xcode | gradle. Detected when omitted
+  --scheme <name>           Xcode scheme to build (xcode only)
+  --variant <name>          Gradle variant to assemble (gradle only, default debug)
+  --project-dir <dir>       Subdirectory holding the native project, e.g. ios
   --concurrency <n>         Candidates evaluated in parallel (default 1, max 8)
   --max-candidates <n>      Refuse to start beyond this many commits (default 64)
   --timeout <seconds>       Per-candidate flow timeout (default 600)
@@ -463,21 +513,23 @@ COMMON OPTIONS
   -v, --version             Show version
 
 EXAMPLES
-  expo-bisect init
-  expo-bisect run --good v1.4.0 --bad HEAD --flow flows/checkout.yaml \\
+  mobile-bisect init
+  mobile-bisect run --good v1.4.0 --bad HEAD --flow flows/checkout.yaml \\
     --expect "the order confirmation screen appears"
-  expo-bisect run --good v1.4.0 --bad HEAD --flow flows/checkout.yaml --dry-run
-  expo-bisect resume
-  expo-bisect report
+  mobile-bisect run --good v1.4.0 --bad HEAD --flow flows/checkout.yaml --dry-run
+  mobile-bisect run --good v1.4.0 --bad HEAD --framework xcode --scheme Orbit
+  mobile-bisect run --good v1.4.0 --bad HEAD --framework gradle --platform android
+  mobile-bisect resume
+  mobile-bisect report
 
-expo-bisect never accepts an API key as a flag. Authentication comes from your
+mobile-bisect never accepts an API key as a flag. Authentication comes from your
 Revyl CLI session or REVYL_API_KEY in the environment.`;
 
 const COMMAND_HELP: Record<Command, string> = {
-  run: `expo-bisect run — binary-search history for the commit that broke a flow
+  run: `mobile-bisect run — binary-search history for the commit that broke a flow
 
 USAGE
-  expo-bisect run --good <ref> --bad <ref> [--flow <path>] [options]
+  mobile-bisect run --good <ref> --bad <ref> [--flow <path>] [options]
 
 Every candidate is checked out into a detached worktree; your working tree is
 never touched. Ctrl-C stops device sessions, removes the worktrees, and prints
@@ -490,6 +542,10 @@ the command to resume.
   --device-model <name>     Cloud device model, e.g. "iPhone 15 Pro"
   --os-version <version>    Cloud device OS version, e.g. "17.5"
   --platform <ios|android>  Defaults to ios
+  --framework <name>        expo | xcode | gradle. Detected when omitted
+  --scheme <name>           Xcode scheme to build (xcode only)
+  --variant <name>          Gradle variant to assemble (gradle only, default debug)
+  --project-dir <dir>       Subdirectory holding the native project, e.g. ios
   --concurrency <n>         Candidates evaluated in parallel (default 1, max 8)
   --max-candidates <n>      Refuse to start beyond this many commits (default 64)
   --timeout <seconds>       Per-candidate flow timeout (default 600)
@@ -503,22 +559,22 @@ the command to resume.
   --flaky <ref>             Dry-run only: commit that goes inconclusive once
   --step-delay <ms>         Dry-run only: per-step delay (default 12)`,
 
-  init: `expo-bisect init — set up a project
+  init: `mobile-bisect init — set up a project
 
 USAGE
-  expo-bisect init [options]
+  mobile-bisect init [options]
 
-Checks git, the Expo project, Revyl auth and your simulator build, writes
-expo-bisect.config.ts, and validates one flow against the current commit.
+Checks git, detects the framework, verifies Revyl auth and any prebuilt app, writes
+mobile-bisect.config.ts, and validates one flow against the current commit.
 
   --flow <path>             Flow to validate (defaults to the first flow found)
   --yes, -y                 Accept defaults instead of prompting
-  --force                   Overwrite an existing expo-bisect.config.ts`,
+  --force                   Overwrite an existing mobile-bisect.config.ts`,
 
-  resume: `expo-bisect resume — continue an interrupted run
+  resume: `mobile-bisect resume — continue an interrupted run
 
 USAGE
-  expo-bisect resume [run-id] [options]
+  mobile-bisect resume [run-id] [options]
 
 With no run-id, the most recent unfinished run continues. Commits that were
 already classified are not re-run.
@@ -528,19 +584,19 @@ already classified are not re-run.
   --json                    Emit the raw event stream as JSON lines
   --flow <path>             Override the flow recorded with the run`,
 
-  report: `expo-bisect report — render the static HTML report
+  report: `mobile-bisect report — render the static HTML report
 
 USAGE
-  expo-bisect report [run-id] [options]
+  mobile-bisect report [run-id] [options]
 
   --out <path>              Write somewhere other than <run-dir>/report.html
   --no-open                 Print the path instead of opening a browser
   --json                    Print { runId, reportPath } as JSON`,
 
-  replay: `expo-bisect replay — drive the live view from a recorded stream
+  replay: `mobile-bisect replay — drive the live view from a recorded stream
 
 USAGE
-  expo-bisect replay <fixture.jsonl> [options]
+  mobile-bisect replay <fixture.jsonl> [options]
 
   --speed <x>               Playback multiplier (default 1)
   --port <n>                Also serve the live view on this port

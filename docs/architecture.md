@@ -3,13 +3,14 @@
 ## Shape
 
 ```
-expo-bisect/
+mobile-bisect/
   packages/
     cli/            command parsing, terminal UI, orchestration
-    core/           bisection state machine, run store, diagnosis, fake runner
+    core/           bisection state machine, adapter contract, run store, diagnosis, fakes
     git/            ancestry enumeration, worktrees, cleanup, metadata
-    expo-runner/    dependency install, bundle preparation, dev-client targeting
-    revyl-runner/   cloud device execution, flow replay, artifact collection
+    expo-runner/    the `expo` adapter: dependency install, bundle prep, dev-client targeting
+    native-runner/  the `xcode` and `gradle` adapters: compile, package, cache
+    revyl-runner/   cloud device execution, build upload, flow replay, artifact collection
     report/         live web interface and static HTML report
   examples/
     orbit-store/    Expo demo app with a real 64-commit history
@@ -23,12 +24,17 @@ expo-bisect/
 
 ## The one idea
 
-Git bisect already knows *which* commit to test next. It has no way to decide whether a commit is good or bad when "bad" means a screen didn't appear. `expo-bisect` supplies that decision by running the app.
+Git bisect already knows *which* commit to test next. It has no way to decide whether a commit is good or bad when "bad" means a screen didn't appear. `mobile-bisect` supplies that decision by running the app.
 
-So the system is two halves that meet at a narrow interface:
+So the system is a search, a way to build, and a way to run — meeting at two narrow interfaces:
 
 - **Search** (`core`, `git`) — pure logic, no I/O beyond git. Fully testable offline.
-- **Runtime** (`expo-runner`, `revyl-runner`) — everything that touches a device, hidden behind `MobileRuntimeRunner`.
+- **Preparation** (`expo-runner`, `native-runner`) — turning a commit into something installable, behind `FrameworkAdapter`.
+- **Runtime** (`revyl-runner`) — everything that touches a device, behind `MobileRuntimeRunner`.
+
+`core` knows about neither Expo nor Xcode nor Gradle. It knows a candidate is
+either a URL to open or an artifact to install, and that is the entire extent of
+its opinion about mobile frameworks. See [`framework-adapters.md`](framework-adapters.md).
 
 The CLI wires them together; the report observes.
 
@@ -88,7 +94,7 @@ Every event carries an `at` timestamp, which is what makes replay possible at ar
 ## Run directory
 
 ```
-.expo-bisect/
+.mobile-bisect/
   runs/<run-id>/
     state.json      resumable snapshot, written atomically
     events.jsonl    append-only log
@@ -103,20 +109,26 @@ Every event carries an `at` timestamp, which is what makes replay possible at ar
 
 Per candidate:
 
-1. Create (or reuse) a detached git worktree at the candidate SHA.
-2. Install dependencies from the lockfile, cached by lockfile content hash so unchanged deps cost nothing across commits.
-3. Start Metro on an isolated port, or export a static bundle.
-4. Point the cloud development client at that source.
+1. Create a detached git worktree at the candidate SHA.
+2. Ask the adapter to prepare it. This happens **before** the device is started, so a commit that will not build never burns cloud device time.
+3. Start a cloud device session.
+4. Hand it the candidate: navigate to the bundle URL, or upload and install the artifact.
 5. Reset the app to a known state.
 6. Replay the flow, emitting `flow.step` as it goes.
 7. Evaluate the assertion.
-8. Collect artifacts and record the result.
+8. Collect artifacts, dispose the candidate, remove the worktree, record the result.
 
-Step 3 is the MVP's load-bearing simplification: **one native binary, many JavaScript bundles.** Rebuilding an iOS binary per candidate would make a 6-run search take hours. This is also why v1 is JavaScript-only — a diff touching `ios/`, `android/`, or the native module set is rejected up front with a `NativeChangeError` rather than silently producing a wrong answer.
+Step 2 is where the frameworks differ, and it is the only place they do.
+
+**Expo** takes the shortcut: one native binary, many JavaScript bundles. It installs dependencies from the lockfile (cached by lockfile hash, so unchanged deps cost nothing across commits), starts Metro on an isolated port or exports a static bundle, and hands the dev client a deep link. Seconds per candidate.
+
+That shortcut is a lie when the range contains native changes — the JavaScript would run against the wrong native modules — so the adapter's `precheck` rejects such a range up front rather than answering confidently and wrongly.
+
+**Xcode and Gradle** do the honest thing and compile. Minutes per candidate rather than seconds, which binary search makes tolerable: 64 commits is 6 builds, not 64. Finished artifacts are cached by SHA, so retries, resumes, and the final comparison never rebuild; builds are serialised, because two compilers contending for the same cores are slower than one after the other.
 
 ## Working tree safety
 
-The tool never runs `git checkout`, `git reset`, `git stash`, or `git bisect` against the user's tree. Every candidate checkout is a detached worktree under `.expo-bisect/worktrees/`, removed on success, on failure, and on SIGINT/SIGTERM. Git commands are invoked through `execFile` with argument arrays, never string interpolation, so a ref containing shell metacharacters is inert.
+The tool never runs `git checkout`, `git reset`, `git stash`, or `git bisect` against the user's tree. Every candidate checkout is a detached worktree under `.mobile-bisect/worktrees/`, removed on success, on failure, and on SIGINT/SIGTERM. Git commands are invoked through `execFile` with argument arrays, never string interpolation, so a ref containing shell metacharacters is inert.
 
 A dirty working tree is refused by default. With `--allow-dirty` the run proceeds, and the uncommitted changes are still never touched.
 

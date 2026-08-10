@@ -1,11 +1,11 @@
 {
-  "name": "expo-bisect",
+  "name": "mobile-bisect",
   "version": "0.1.0",
   "description": "git bisect for visual mobile regressions: binary-search an Expo app's history on cloud devices until one commit is to blame",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "expo-bisect": "./dist/cli.js"
+    "mobile-bisect": "./dist/cli.js"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -39,14 +39,14 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@expo-bisect/core": "^0.1.0",
-    "@expo-bisect/git": "^0.1.0",
+    "@mobile-bisect/core": "^0.1.0",
+    "@mobile-bisect/git": "^0.1.0",
     "picocolors": "^1.1.1",
     "yaml": "^2.6.0"
   },
   "optionalDependencies": {
-    "@expo-bisect/report": "^0.1.0",
-    "@expo-bisect/revyl-runner": "^0.1.0"
+    "@mobile-bisect/report": "^0.1.0",
+    "@mobile-bisect/revyl-runner": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.9.0",

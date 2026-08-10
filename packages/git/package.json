@@ -1,7 +1,7 @@
 {
-  "name": "@expo-bisect/git",
+  "name": "@mobile-bisect/git",
   "version": "0.1.0",
-  "description": "Read-only git access and detached worktrees for expo-bisect. Never touches your working tree.",
+  "description": "Read-only git access and detached worktrees for mobile-bisect. Never touches your working tree.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -22,7 +22,7 @@
     "test": "tsc -b && vitest run"
   },
   "dependencies": {
-    "@expo-bisect/core": "*"
+    "@mobile-bisect/core": "*"
   },
   "engines": {
     "node": ">=18"

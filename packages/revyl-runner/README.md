@@ -1,12 +1,12 @@
-# `@expo-bisect/revyl-runner`
+# `@mobile-bisect/revyl-runner`
 
-The bridge between `expo-bisect` and a cloud iPhone.
+The bridge between `mobile-bisect` and a cloud device.
 
 This package implements the `MobileRuntimeRunner` interface from
-`@expo-bisect/core` by shelling out to the [Revyl](https://revyl.ai) CLI. It
-starts a cloud device, points the already-installed Expo dev client at a
-candidate commit's JavaScript, walks a flow, asks one natural-language
-assertion, and returns `pass` / `fail` / `inconclusive`.
+`@mobile-bisect/core` by shelling out to the [Revyl](https://revyl.ai) CLI. It
+starts a cloud device, gets the candidate onto it — a deep link for a JavaScript
+bundle, an upload-and-install for a compiled binary — walks a flow, asks one
+natural-language assertion, and returns `pass` / `fail` / `inconclusive`.
 
 Every fact about the Revyl CLI lives in exactly one file — `src/cli-adapter.ts`.
 `src/runner.ts` reads as plain orchestration. If the CLI changes shape, only the
@@ -18,7 +18,7 @@ adapter and `fixtures/` move.
 ## Install
 
 ```bash
-npm install @expo-bisect/revyl-runner
+npm install @mobile-bisect/revyl-runner
 ```
 
 Requires the Revyl CLI on the machine (v0.1.71 or newer) and an authenticated
@@ -27,7 +27,7 @@ session.
 ## Usage
 
 ```ts
-import { RevylRunner, checkRevylAuth } from '@expo-bisect/revyl-runner';
+import { RevylRunner, checkRevylAuth } from '@mobile-bisect/revyl-runner';
 
 const auth = await checkRevylAuth();
 if (!auth.ok) throw new Error(auth.message);

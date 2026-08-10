@@ -1,0 +1,13 @@
+{
+  "app_id": "1f583454-c0f4-4d67-9e6a-4e549f8d2bc7",
+  "version": {
+    "id": "509b8cac-7be8-448b-a31d-74591245cdcf",
+    "version": "8d4c2f1",
+    "uploaded_at": "2026-08-07T16:41:00.000000Z",
+    "metadata": {
+      "artifact_kind": "ios_simulator_app",
+      "artifact_type": "app",
+      "source": "upload"
+    }
+  }
+}

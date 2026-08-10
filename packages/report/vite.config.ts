@@ -9,7 +9,7 @@ const FIXTURE = resolve(__dirname, '../../fixtures/demo-runs/orbit-checkout.json
 /** During `vite dev` only: inline the demo fixture so the app has data to render. */
 function devFixture(): Plugin {
   return {
-    name: 'expo-bisect-dev-fixture',
+    name: 'mobile-bisect-dev-fixture',
     apply: 'serve',
     transformIndexHtml(html) {
       const events = readFileSync(FIXTURE, 'utf8')
@@ -17,9 +17,9 @@ function devFixture(): Plugin {
         .filter((l) => l.trim())
         .map((l) => JSON.parse(l));
       return html
-        .replace('"__EXPO_BISECT_FRAMES__"', '{}')
-        .replace('"__EXPO_BISECT_EVENTS__"', JSON.stringify(events))
-        .replace('"__EXPO_BISECT_CONFIG__"', JSON.stringify({ mode: 'replay', runId: 'dev' }));
+        .replace('"__MOBILE_BISECT_FRAMES__"', '{}')
+        .replace('"__MOBILE_BISECT_EVENTS__"', JSON.stringify(events))
+        .replace('"__MOBILE_BISECT_CONFIG__"', JSON.stringify({ mode: 'replay', runId: 'dev' }));
     },
   };
 }

@@ -17,7 +17,7 @@ setInterval(() => {}, 1e9);
 const dirs: string[] = [];
 
 async function scriptFile(source: string): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'expo-bisect-proc-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-proc-'));
   dirs.push(dir);
   const file = path.join(dir, 'child.cjs');
   await fs.writeFile(file, source);

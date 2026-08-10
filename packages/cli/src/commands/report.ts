@@ -1,6 +1,6 @@
 import path from 'node:path';
 import pc from 'picocolors';
-import { RunStore } from '@expo-bisect/core';
+import { RunStore } from '@mobile-bisect/core';
 import { loadReport } from '../adapters.js';
 import type { ReportOptions } from '../args.js';
 import { openInBrowser } from '../browser.js';
@@ -13,7 +13,7 @@ export async function reportCommand(opts: ReportOptions): Promise<number> {
   const events = await store.readEvents();
   if (events.length === 0) {
     throw new CliError(`Run \`${store.runId}\` has no events to report on.`, {
-      hint: 'Runs live in .expo-bisect/runs — `expo-bisect report <run-id>` picks a specific one.',
+      hint: 'Runs live in .mobile-bisect/runs — `mobile-bisect report <run-id>` picks a specific one.',
     });
   }
 
@@ -44,6 +44,6 @@ async function pickRun(repo: string, runId?: string): Promise<RunStore> {
   const latest = await RunStore.latest(repo);
   if (latest) return latest;
   throw new CliError('No runs found in this project.', {
-    hint: 'Start one with `expo-bisect run --good <ref> --bad HEAD`.',
+    hint: 'Start one with `mobile-bisect run --good <ref> --bad HEAD`.',
   });
 }

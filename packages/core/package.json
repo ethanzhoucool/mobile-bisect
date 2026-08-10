@@ -1,7 +1,7 @@
 {
-  "name": "@expo-bisect/core",
+  "name": "@mobile-bisect/core",
   "version": "0.1.0",
-  "description": "Bisection state machine, run store, and diagnostics for expo-bisect.",
+  "description": "Bisection state machine, run store, and diagnostics for mobile-bisect.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

@@ -16,7 +16,7 @@ function readJson<T>(id: string): T | undefined {
   try {
     const v = JSON.parse(el.textContent);
     // Unreplaced build placeholder — treat as absent.
-    return typeof v === 'string' && v.startsWith('__EXPO_BISECT') ? undefined : (v as T);
+    return typeof v === 'string' && v.startsWith('__MOBILE_BISECT') ? undefined : (v as T);
   } catch {
     return undefined;
   }
@@ -25,9 +25,9 @@ function readJson<T>(id: string): T | undefined {
 const params = new URLSearchParams(location.search);
 const num = (k: string) => (params.has(k) ? Number(params.get(k)) : undefined);
 
-const config = readJson<InlineConfig>('expo-bisect-config') ?? {};
-const events = readJson<BisectEvent[]>('expo-bisect-events') ?? [];
-const frames = readJson<Record<string, string>>('expo-bisect-frames') ?? {};
+const config = readJson<InlineConfig>('mobile-bisect-config') ?? {};
+const events = readJson<BisectEvent[]>('mobile-bisect-events') ?? [];
+const frames = readJson<Record<string, string>>('mobile-bisect-frames') ?? {};
 
 createRoot(document.getElementById('root')!).render(
   <BisectReport

@@ -53,18 +53,22 @@ export function formatNativeChangeMessage(
 ): string {
   const bullets = report.reasons.map((r) => `  - ${r}`).join('\n');
   return [
-    `${goodRef}..${badRef} contains a native change, and expo-bisect v1 only supports`,
-    'JavaScript-only regressions.',
+    `${goodRef}..${badRef} contains a native change, which the Expo adapter cannot`,
+    'honestly bisect.',
     '',
     bullets || '  - (no detail recorded)',
     '',
-    'The bisect works by pointing an already-installed Expo dev client at each',
-    "candidate's JS. A native change (new/updated native module, a Podfile or Gradle",
-    'edit, or a config-plugin change in app.json / app.config.*) needs a fresh',
-    'dev-client build, so swapping JS alone would test the wrong thing.',
+    'The Expo adapter points an already-installed dev client at each candidate\'s JS.',
+    'A native change (new/updated native module, a Podfile or Gradle edit, or a',
+    'config-plugin change in app.json / app.config.*) needs a fresh binary, so',
+    'swapping JS alone would test the wrong thing.',
     '',
-    'Narrow --good/--bad to a JS-only range, or rebuild the dev client per candidate',
-    'outside expo-bisect.',
+    'Either narrow --good/--bad to a JS-only range, or build every candidate for real:',
+    '',
+    '  mobile-bisect run --framework xcode  --good <ref> --bad <ref>   # iOS',
+    '  mobile-bisect run --framework gradle --good <ref> --bad <ref>   # Android',
+    '',
+    'That is minutes per candidate instead of seconds, but it is correct.',
   ].join('\n');
 }
 

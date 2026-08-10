@@ -1,5 +1,5 @@
 /**
- * Built-in fallback for `@expo-bisect/report`, used when the sibling package is
+ * Built-in fallback for `@mobile-bisect/report`, used when the sibling package is
  * unbuilt or absent. Zero dependencies, node builtins only: the event stream is
  * folded into a small view model and rendered as one self-contained HTML file,
  * which `serve` reuses as the live page (SSE tails events.jsonl).
@@ -19,7 +19,7 @@ import type {
   CommitResult,
   CommitState,
   CommitSummary,
-} from '@expo-bisect/core';
+} from '@mobile-bisect/core';
 
 const DEFAULT_PORT = 4785;
 const PORT_TRIES = 8;
@@ -243,14 +243,14 @@ interface PageOpts {
 function commandBar(view: View): string {
   const m = view.meta;
   if (!m) {
-    return `<h1>expo-bisect</h1><p class="facts">No <code>search.started</code> event yet — nothing to summarise.</p>`;
+    return `<h1>mobile-bisect</h1><p class="facts">No <code>search.started</code> event yet — nothing to summarise.</p>`;
   }
   const facts: [string, string][] = [
     ['good', m.goodRef], ['bad', m.badRef], ['flow', m.flowName],
     ['commits', String(m.totalCommits || view.commits.length)],
     ['planned rounds', String(m.plannedRounds)], ['run', m.runId],
   ];
-  return `<h1>expo-bisect &mdash; ${esc(m.flowName)}</h1>
+  return `<h1>mobile-bisect &mdash; ${esc(m.flowName)}</h1>
 <p class="facts"><span>expect: <b>${esc(m.expect)}</b></span></p>
 <div class="cmd mono">${esc(m.command)}</div>
 <div class="facts">${facts.map(([k, v]) => `<span>${esc(k)} <b>${esc(v)}</b></span>`).join('')}</div>`;
@@ -356,7 +356,7 @@ ${bad ? `<p class="note">Oldest known bad: ${esc(short(bad.sha))}</p>` : ''}
 }
 
 function renderPage(view: View, o: PageOpts): string {
-  const title = view.meta ? `expo-bisect — ${view.meta.flowName}` : 'expo-bisect';
+  const title = view.meta ? `mobile-bisect — ${view.meta.flowName}` : 'mobile-bisect';
   const livePanel =
     o.live && !view.culprit && !view.failure
       ? `<h2>Live</h2><div class="card live"><div id="livestatus" class="mono">waiting for events…</div><div class="track"><i id="livebar"></i></div></div>`
@@ -374,7 +374,7 @@ ${livePanel}
 ${rail(view)}
 ${timeline(view)}
 ${verdict(view, o)}
-<footer>${esc(view.eventCount)} events${view.meta ? ` · run ${esc(view.meta.runId)}` : ''} · rendered by the expo-bisect built-in reporter</footer>
+<footer>${esc(view.eventCount)} events${view.meta ? ` · run ${esc(view.meta.runId)}` : ''} · rendered by the mobile-bisect built-in reporter</footer>
 </div>
 ${o.live ? `<script>${LIVE_JS}</script>` : ''}
 </body></html>
@@ -575,7 +575,7 @@ export async function serve(
   const first = opts.port ?? DEFAULT_PORT;
   let bound = 0;
   for (let p = first; p < first + PORT_TRIES && !bound; p += 1) if (await bind(p)) bound = p;
-  if (!bound) throw new Error(`expo-bisect: no free port in ${first}-${first + PORT_TRIES - 1}`);
+  if (!bound) throw new Error(`mobile-bisect: no free port in ${first}-${first + PORT_TRIES - 1}`);
 
   const url = `http://127.0.0.1:${bound}`;
   if (opts.open) openBrowser(url);

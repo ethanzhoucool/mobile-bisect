@@ -1,4 +1,4 @@
-import type { RunVerdict } from '@expo-bisect/core';
+import type { RunVerdict } from '@mobile-bisect/core';
 import { redactWithEnv } from './redact.js';
 
 /**

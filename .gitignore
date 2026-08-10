@@ -3,7 +3,7 @@ dist/
 *.tsbuildinfo
 
 # Run output — every bisect writes here
-.expo-bisect/
+.mobile-bisect/
 
 # The demo app carries its own 64-commit history as a nested repo
 examples/orbit-store/

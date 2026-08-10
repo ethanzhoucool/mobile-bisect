@@ -31,7 +31,7 @@ export function CommandBar({ meta, round, remaining, done, live }: CommandBarPro
   return (
     <header className="bar">
       <div className="bar-left mono">
-        <span className="bar-brand">expo-bisect</span>
+        <span className="bar-brand">mobile-bisect</span>
         <i className="sep" />
         <span>{meta.flowName}</span>
         <i className="sep" />

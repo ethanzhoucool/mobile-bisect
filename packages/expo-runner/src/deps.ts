@@ -43,7 +43,7 @@ export class MissingLockfileError extends Error {
     const names = LOCKFILES.map((l) => l.file);
     super(
       `no lockfile in ${worktreePath}. Looked for: ${names.join(', ')}. ` +
-        'expo-bisect installs strictly from a lockfile — bisecting over unpinned dependencies ' +
+        'mobile-bisect installs strictly from a lockfile — bisecting over unpinned dependencies ' +
         'would blame the wrong commit. Commit a lockfile and re-run.',
     );
     this.name = 'MissingLockfileError';
@@ -109,7 +109,7 @@ export interface CacheKeyInput {
 
 export function lockfileCacheKey(input: CacheKeyInput): string {
   const h = createHash('sha256');
-  h.update(`expo-bisect/nm/1\n${input.manager}\nnode${input.nodeMajor}\n`);
+  h.update(`mobile-bisect/nm/1\n${input.manager}\nnode${input.nodeMajor}\n`);
   h.update(typeof input.lockfileBytes === 'string' ? Buffer.from(input.lockfileBytes) : input.lockfileBytes);
   return h.digest('hex').slice(0, 32);
 }
@@ -241,8 +241,8 @@ async function verifyTree(src: string, dest: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export function defaultCacheDir(projectRoot?: string): string {
-  if (projectRoot) return path.join(projectRoot, '.expo-bisect', 'cache');
-  return path.join(os.tmpdir(), 'expo-bisect-cache');
+  if (projectRoot) return path.join(projectRoot, '.mobile-bisect', 'cache');
+  return path.join(os.tmpdir(), 'mobile-bisect-cache');
 }
 
 async function isFile(p: string): Promise<boolean> {

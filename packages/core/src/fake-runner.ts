@@ -2,7 +2,7 @@
  * A `MobileRuntimeRunner` that needs no cloud, no build, and no network.
  *
  * Every commit at or after the culprit fails; everything before it passes. This
- * is what makes `expo-bisect --demo` runnable end-to-end, and what the state
+ * is what makes `mobile-bisect --demo` runnable end-to-end, and what the state
  * machine's tests bisect against.
  */
 
@@ -94,7 +94,8 @@ export class FakeRunner implements MobileRuntimeRunner {
   }
 
   async installOrLaunch(input: LaunchInput): Promise<void> {
-    const inferred = this.infer(input.buildId) ?? this.infer(input.bundleUrl);
+    const inferred =
+      this.infer(input.buildId) ?? this.infer(input.bundleUrl) ?? this.infer(input.appPath);
     if (inferred) this.bindings.set(input.sessionId, inferred.sha);
     if (!this.bindings.has(input.sessionId)) {
       if (!this.pendingSha) {

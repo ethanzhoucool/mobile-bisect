@@ -1,13 +1,13 @@
 {
-  "name": "@expo-bisect/report",
+  "name": "@mobile-bisect/report",
   "version": "0.1.0",
   "license": "MIT",
   "type": "module",
-  "description": "Live + static visual report for expo-bisect runs.",
+  "description": "Live + static visual report for mobile-bisect runs.",
   "main": "./dist-node/index.js",
   "types": "./dist-node/index.d.ts",
   "bin": {
-    "expo-bisect-report": "./bin/expo-bisect-report.mjs"
+    "mobile-bisect-report": "./bin/mobile-bisect-report.mjs"
   },
   "exports": {
     ".": {
@@ -29,8 +29,8 @@
     "build:node": "tsc -p tsconfig.node.json",
     "build": "npm run build:app && npm run build:node",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
-    "render:fixture": "node ./bin/expo-bisect-report.mjs render ../../fixtures/demo-runs/orbit-checkout.jsonl ./out/report.html",
-    "serve:fixture": "node ./bin/expo-bisect-report.mjs serve ../../fixtures/demo-runs/orbit-checkout.jsonl"
+    "render:fixture": "node ./bin/mobile-bisect-report.mjs render ../../fixtures/demo-runs/orbit-checkout.jsonl ./out/report.html",
+    "serve:fixture": "node ./bin/mobile-bisect-report.mjs serve ../../fixtures/demo-runs/orbit-checkout.jsonl"
   },
   "dependencies": {
     "react": "^18.3.1",

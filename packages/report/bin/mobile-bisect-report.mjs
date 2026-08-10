@@ -9,14 +9,14 @@ const flag = (name, fallback) => {
 
 if (cmd === 'render') {
   if (!target) {
-    console.error('usage: expo-bisect-report render <runDir|events.jsonl> [out.html]');
+    console.error('usage: mobile-bisect-report render <runDir|events.jsonl> [out.html]');
     process.exit(1);
   }
   const path = await renderReport({ runDir: target, outPath: out });
   console.log(path);
 } else if (cmd === 'serve') {
   if (!target) {
-    console.error('usage: expo-bisect-report serve <runDir|events.jsonl> [--port 4713] [--open]');
+    console.error('usage: mobile-bisect-report serve <runDir|events.jsonl> [--port 4713] [--open]');
     process.exit(1);
   }
   const handle = await serve({
@@ -24,12 +24,12 @@ if (cmd === 'render') {
     port: Number(flag('port', 4713)),
     open: process.argv.includes('--open'),
   });
-  console.log(`expo-bisect report → ${handle.url}`);
+  console.log(`mobile-bisect report → ${handle.url}`);
   process.on('SIGINT', async () => {
     await handle.close();
     process.exit(0);
   });
 } else {
-  console.error('usage: expo-bisect-report <render|serve> <runDir|events.jsonl>');
+  console.error('usage: mobile-bisect-report <render|serve> <runDir|events.jsonl>');
   process.exit(1);
 }

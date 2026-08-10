@@ -31,7 +31,7 @@ async function git(dir: string, args: string[]): Promise<string> {
 
 /** A repo with `n` linear commits touching app/checkout.tsx, oldest first. */
 async function makeRepo(n = 8): Promise<{ dir: string; shas: string[] }> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'expo-bisect-git-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-git-'));
   tmpdirs.push(dir);
   await git(dir, ['init', '--quiet']);
   await git(dir, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
@@ -59,7 +59,7 @@ describe('isGitRepo / resolveRef / commitMeta', () => {
   it('detects a repo and a non-repo', async () => {
     const { dir } = await makeRepo(2);
     expect(await isGitRepo(dir)).toBe(true);
-    const plain = await fs.mkdtemp(path.join(os.tmpdir(), 'expo-bisect-plain-'));
+    const plain = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-plain-'));
     tmpdirs.push(plain);
     expect(await isGitRepo(plain)).toBe(false);
   });
@@ -148,7 +148,7 @@ describe('assertCleanWorktree', () => {
 });
 
 describe('worktrees', () => {
-  it('checks a commit out in a detached worktree under .expo-bisect/worktrees', async () => {
+  it('checks a commit out in a detached worktree under .mobile-bisect/worktrees', async () => {
     const { dir, shas } = await makeRepo(6);
     const wt = await createWorktree(dir, shas[2]!);
     expect(wt.path).toBe(path.join(dir, WORKTREE_ROOT, shas[2]!));

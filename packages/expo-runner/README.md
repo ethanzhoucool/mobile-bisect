@@ -1,4 +1,4 @@
-# @expo-bisect/expo-runner
+# @mobile-bisect/expo-runner
 
 Prepares a candidate commit's JavaScript for a cloud device — without rebuilding the native binary.
 
@@ -17,12 +17,17 @@ git worktree (sha)  ->  install deps  ->  serve that commit's JS  ->  exp+<schem
 ```
 
 A bisect round drops from ~20 minutes to seconds. The price of the trick is that it only works for
-**JavaScript-only** changes — see [the native-change guard](#the-native-change-guard).
+**JavaScript-only** changes — see [the native-change guard](#the-native-change-guard). For a range
+that does touch native code, `@mobile-bisect/native-runner` compiles each candidate for real:
+slower, but correct.
+
+`ExpoAdapter` is the `FrameworkAdapter` face over everything below; `ExpoCandidateRunner` is the
+same machinery if you want to drive it yourself.
 
 ## Usage
 
 ```ts
-import { ExpoCandidateRunner, detectNativeChangeFromGit, NativeChangeError } from '@expo-bisect/expo-runner';
+import { ExpoCandidateRunner, detectNativeChangeFromGit, NativeChangeError } from '@mobile-bisect/expo-runner';
 
 // Refuse the run up front if the range is not JS-only.
 const report = await detectNativeChangeFromGit(repo, goodSha, badSha);
@@ -179,7 +184,7 @@ Readiness is always probed on loopback, but the host baked into `bundleUrl` is w
 new ExpoCandidateRunner({ projectRoot, host: 'my-tunnel-123.relay.example' });
 ```
 
-`@expo-bisect/revyl-runner` supplies that relay/tunnel hostname and points the cloud device at the
+`@mobile-bisect/revyl-runner` supplies that relay/tunnel hostname and points the cloud device at the
 resulting deep link. Without it, the URL resolves to the device's own loopback and the dev client
 simply fails to connect.
 

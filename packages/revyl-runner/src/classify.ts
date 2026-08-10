@@ -10,7 +10,7 @@
  * question and answered it wrong. Everything else is `inconclusive`.
  */
 
-import type { RunVerdict } from '@expo-bisect/core';
+import type { RunVerdict } from '@mobile-bisect/core';
 import type { StepOutcome } from './cli-adapter.js';
 
 /**

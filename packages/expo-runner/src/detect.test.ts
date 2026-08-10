@@ -8,7 +8,7 @@ import { detectExpoProject, findAppConfigFile, parseSdkVersion, readAppJson } fr
 const dirs: string[] = [];
 
 async function project(files: Record<string, string>): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'expo-bisect-detect-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-detect-'));
   dirs.push(dir);
   for (const [name, content] of Object.entries(files)) {
     await fs.mkdir(path.dirname(path.join(dir, name)), { recursive: true });

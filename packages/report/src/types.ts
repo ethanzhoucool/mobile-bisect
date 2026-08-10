@@ -1,5 +1,5 @@
 /**
- * Re-declaration of the `@expo-bisect/core` contract.
+ * Re-declaration of the `@mobile-bisect/core` contract.
  *
  * The browser bundle must not reach across package boundaries at build time
  * (the static report has to build standalone), so the shapes it consumes are

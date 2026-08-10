@@ -54,7 +54,7 @@ export async function detectExpoProject(dir: string): Promise<ExpoProjectInfo> {
       return {
         ok: false,
         reason:
-          `${dir} is a bare React Native app (react-native without expo). expo-bisect drives an ` +
+          `${dir} is a bare React Native app (react-native without expo). mobile-bisect drives an ` +
           'Expo dev client, so the project needs the expo package installed.',
       };
     }

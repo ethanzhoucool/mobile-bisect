@@ -39,7 +39,7 @@ Rigid 8px spacing system. The canvas stays open and calm. The phones, the commit
 A compact terminal-style strip, fixed for the whole run.
 
 ```
-expo-bisect  checkout-flow  v1.4.0..HEAD  64 commits  expected: order confirmation appears
+mobile-bisect  checkout-flow  v1.4.0..HEAD  64 commits  expected: order confirmation appears
                                                        ROUND 3 OF 6    8 COMMITS REMAIN
 ```
 

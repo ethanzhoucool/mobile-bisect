@@ -1,10 +1,10 @@
 /**
- * Git access for expo-bisect.
+ * Git access for mobile-bisect.
  *
  * SAFETY CONTRACT: this package never mutates the user's working tree. No
  * checkout, reset, stash, clean, or `git bisect` is ever issued against it —
  * every candidate is materialized in a detached worktree under
- * `.expo-bisect/worktrees/<sha>`, which is registered for cleanup on exit and
+ * `.mobile-bisect/worktrees/<sha>`, which is registered for cleanup on exit and
  * on SIGINT/SIGTERM. All git invocations go through `execFile`, so a ref
  * containing shell metacharacters is inert.
  */
@@ -15,9 +15,9 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 
 // Type-only: erased at compile time, so this package ships zero runtime deps.
-import type { CommitSummary } from '@expo-bisect/core';
+import type { CommitSummary } from '@mobile-bisect/core';
 
-export const WORKTREE_ROOT = path.join('.expo-bisect', 'worktrees');
+export const WORKTREE_ROOT = path.join('.mobile-bisect', 'worktrees');
 
 /** `%H \x1f %h \x1f author \x1f authorDate \x1f subject` — subject is always last. */
 const FMT = '%H%x1f%h%x1f%an%x1f%aI%x1f%s';
@@ -113,7 +113,7 @@ export async function assertCleanWorktree(repo: string): Promise<void> {
   const more = dirty.length > 10 ? `\n  …and ${dirty.length - 10} more` : '';
   throw new Error(
     `${repo} has uncommitted changes:\n${shown}${more}\n` +
-      'Commit or stash them yourself first — expo-bisect will not touch your working tree.',
+      'Commit or stash them yourself first — mobile-bisect will not touch your working tree.',
   );
 }
 

@@ -237,7 +237,14 @@ describe('NativeChangeError', () => {
     expect(err.changedNativeModules).toEqual(['expo-camera']);
     expect(err.goodRef).toBe('v1.2.0');
     expect(err.badRef).toBe('HEAD');
-    expect(err.message).toContain('JavaScript-only');
-    expect(err.message).toContain('dev-client build');
+    expect(err.message).toContain('needs a fresh binary');
+  });
+
+  it('points at the adapters that can build the range for real', () => {
+    const report = detectNativeChange({ changedFiles: ['ios/Podfile'] });
+    const message = new NativeChangeError(report, 'v1.2.0', 'HEAD').message;
+
+    expect(message).toContain('--framework xcode');
+    expect(message).toContain('--framework gradle');
   });
 });

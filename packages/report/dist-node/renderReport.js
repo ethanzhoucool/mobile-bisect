@@ -21,7 +21,7 @@ export async function renderReportDetailed(opts) {
         ({ map: frameMap, stats: frames } = await inlineFrames(events, runDir));
         if (frames.failed.length) {
             const warn = opts.onWarn ?? ((m) => console.warn(m));
-            warn(`expo-bisect report: ${frames.failed.length} frame(s) could not be inlined ` +
+            warn(`mobile-bisect report: ${frames.failed.length} frame(s) could not be inlined ` +
                 `(first: ${frames.failed[0].url} — ${frames.failed[0].reason})`);
         }
     }

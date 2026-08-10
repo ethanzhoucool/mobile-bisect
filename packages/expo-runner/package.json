@@ -1,5 +1,5 @@
 {
-  "name": "@expo-bisect/expo-runner",
+  "name": "@mobile-bisect/expo-runner",
   "version": "0.1.0",
   "description": "Prepares a candidate commit's JavaScript for a cloud device without rebuilding the native binary.",
   "license": "MIT",
@@ -22,7 +22,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@expo-bisect/core": "*"
+    "@mobile-bisect/core": "*"
   },
   "engines": {
     "node": ">=18"

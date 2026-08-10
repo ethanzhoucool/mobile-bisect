@@ -4,7 +4,7 @@
  */
 
 import pc from 'picocolors';
-import type { BisectEvent, CommitSummary } from '@expo-bisect/core';
+import type { BisectEvent, CommitSummary } from '@mobile-bisect/core';
 import type { EventSink } from './sink.js';
 
 type Write = (text: string) => void;

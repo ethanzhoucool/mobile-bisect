@@ -46,7 +46,7 @@ export async function renderReportDetailed(
     if (frames.failed.length) {
       const warn = opts.onWarn ?? ((m: string) => console.warn(m));
       warn(
-        `expo-bisect report: ${frames.failed.length} frame(s) could not be inlined ` +
+        `mobile-bisect report: ${frames.failed.length} frame(s) could not be inlined ` +
           `(first: ${frames.failed[0].url} — ${frames.failed[0].reason})`,
       );
     }

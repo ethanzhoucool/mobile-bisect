@@ -1,14 +1,14 @@
 /**
  * Runtime adapter for the two optional sibling packages.
  *
- * `@expo-bisect/core` and `@expo-bisect/git` are hard dependencies and are
+ * `@mobile-bisect/core` and `@mobile-bisect/git` are hard dependencies and are
  * imported directly wherever they are used. `report` and `revyl-runner` are
  * not: a report can be rendered by the built-in fallback, and cloud devices are
  * simply unavailable without the runner. Both are loaded lazily so a missing or
  * unbuilt package degrades instead of crashing the CLI at import time.
  */
 
-import type { FlowDefinition, MobileRuntimeRunner } from '@expo-bisect/core';
+import type { FlowDefinition, MobileRuntimeRunner } from '@mobile-bisect/core';
 
 export type ApiSource = 'package' | 'builtin';
 
@@ -52,8 +52,8 @@ export interface RunnerApi {
   checkRevylAuth(): Promise<{ ok: boolean; org?: string; message: string }>;
 }
 
-/** Set EXPO_BISECT_FALLBACK=1 to ignore the optional packages entirely. */
-const FORCE_FALLBACK = process.env.EXPO_BISECT_FALLBACK === '1';
+/** Set MOBILE_BISECT_FALLBACK=1 to ignore the optional packages entirely. */
+const FORCE_FALLBACK = process.env.MOBILE_BISECT_FALLBACK === '1';
 
 async function tryImport(specifier: string): Promise<Record<string, unknown> | null> {
   if (FORCE_FALLBACK) return null;
@@ -72,7 +72,7 @@ let reportPromise: Promise<ReportApi> | undefined;
 
 export function loadReport(): Promise<ReportApi> {
   reportPromise ??= (async (): Promise<ReportApi> => {
-    const mod = await tryImport('@expo-bisect/report');
+    const mod = await tryImport('@mobile-bisect/report');
     if (has(mod, ['renderReport', 'serve'])) {
       return { source: 'package', ...(mod as unknown as Omit<ReportApi, 'source'>) };
     }
@@ -86,7 +86,7 @@ let runnerPromise: Promise<RunnerApi> | undefined;
 
 export function loadRunner(): Promise<RunnerApi> {
   runnerPromise ??= (async (): Promise<RunnerApi> => {
-    const mod = await tryImport('@expo-bisect/revyl-runner');
+    const mod = await tryImport('@mobile-bisect/revyl-runner');
     if (has(mod, ['RevylRunner', 'checkRevylAuth'])) {
       const m = mod as unknown as {
         RevylRunner: new (opts: RevylRunnerInput) => MobileRuntimeRunner;
@@ -106,7 +106,7 @@ export function loadRunner(): Promise<RunnerApi> {
       checkRevylAuth: async () => ({
         ok: false,
         message:
-          '@expo-bisect/revyl-runner is not installed, so cloud devices are unavailable. `--dry-run` still works offline.',
+          '@mobile-bisect/revyl-runner is not installed, so cloud devices are unavailable. `--dry-run` still works offline.',
       }),
     };
   })();
@@ -115,7 +115,7 @@ export function loadRunner(): Promise<RunnerApi> {
 
 export class MissingRunnerError extends Error {
   constructor() {
-    super('Cloud devices need @expo-bisect/revyl-runner, which is not installed.');
+    super('Cloud devices need @mobile-bisect/revyl-runner, which is not installed.');
     this.name = 'MissingRunnerError';
   }
 }

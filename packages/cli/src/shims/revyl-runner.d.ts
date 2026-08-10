@@ -1,4 +1,4 @@
-/** Compile-time shim for `@expo-bisect/revyl-runner`. See src/shims/core.d.ts. */
+/** Compile-time shim for `@mobile-bisect/revyl-runner`. See src/shims/core.d.ts. */
 
 import type {
   Artifacts,
@@ -8,7 +8,7 @@ import type {
   RunResult,
   Session,
   StartSessionInput,
-} from '@expo-bisect/core';
+} from '@mobile-bisect/core';
 
 /**
  * Options are passed through from the CLI. Credentials are never part of this

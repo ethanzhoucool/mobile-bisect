@@ -101,7 +101,7 @@ export function makeCommits(n: number, prefix = 'c'): CommitSummary[] {
 export function makeMeta(totalCommits: number, over: Partial<BisectMeta> = {}): BisectMeta {
   return {
     runId: 'test-run',
-    command: 'npx expo-bisect --good A --bad B',
+    command: 'npx mobile-bisect --good A --bad B',
     flowName: 'test-flow',
     goodRef: 'A',
     badRef: 'B',

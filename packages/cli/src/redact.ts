@@ -1,14 +1,14 @@
 /**
  * Secret scrubbing.
  *
- * The rules live in `@expo-bisect/core` so the CLI, the runner and the report
+ * The rules live in `@mobile-bisect/core` so the CLI, the runner and the report
  * all scrub identically; this module is the CLI's synchronous entry point onto
  * them. Everything that reaches events.jsonl, state.json, the report or the
  * terminal passes through here, so a run directory is safe to attach to a bug
  * report as-is.
  */
 
-import { redactString, redactValue } from '@expo-bisect/core';
+import { redactString, redactValue } from '@mobile-bisect/core';
 
 export const REDACTED = '[redacted]';
 

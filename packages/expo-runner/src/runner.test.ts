@@ -39,7 +39,7 @@ setInterval(() => {}, 1e9);
 const dirs: string[] = [];
 
 async function worktree(script: string, appJson?: unknown): Promise<{ dir: string; command: string }> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'expo-bisect-runner-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-runner-'));
   dirs.push(dir);
   await fs.writeFile(
     path.join(dir, 'package.json'),
@@ -230,7 +230,7 @@ describe('ExpoCandidateRunner (metro mode)', () => {
   }, 30_000);
 
   it('refuses a worktree that is not an Expo project', async () => {
-    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'expo-bisect-runner-'));
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-runner-'));
     dirs.push(dir);
     await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ dependencies: {} }));
     const runner = new ExpoCandidateRunner({ projectRoot: dir, install: false });

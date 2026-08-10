@@ -86,7 +86,7 @@ events.push({
   at: at(0),
   meta: {
     runId: 'orbit-checkout-demo',
-    command: 'npx expo-bisect --good v1.4.0 --bad HEAD --flow flows/checkout.yaml --expect "the order confirmation screen appears"',
+    command: 'npx mobile-bisect --good v1.4.0 --bad HEAD --flow flows/checkout.yaml --expect "the order confirmation screen appears"',
     flowName: 'checkout-flow',
     goodRef: 'v1.4.0',
     badRef: 'HEAD',
@@ -169,6 +169,6 @@ events.push({
   diagnosis:
     'POST /orders returned 200 in both builds. Navigation stopped after the response parser returned undefined.',
 });
-events.push({ type: 'report.ready', at: at(300), reportPath: '.expo-bisect/runs/orbit-checkout-demo/report.html' });
+events.push({ type: 'report.ready', at: at(300), reportPath: '.mobile-bisect/runs/orbit-checkout-demo/report.html' });
 
 process.stdout.write(events.map((e) => JSON.stringify(e)).join('\n') + '\n');

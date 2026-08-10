@@ -16,7 +16,7 @@ import {
 const dirs: string[] = [];
 
 async function tmpDir(): Promise<string> {
-  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'expo-bisect-deps-'));
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-deps-'));
   dirs.push(dir);
   return dir;
 }

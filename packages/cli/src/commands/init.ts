@@ -1,7 +1,7 @@
 /**
  * First-run setup: six checks, each pass/fail, nothing hidden.
  *
- * `init` is allowed to create two files (expo-bisect.config.ts and a starter
+ * `init` is allowed to create two files (mobile-bisect.config.ts and a starter
  * flow) and nothing else. It never edits a file the user already owns.
  */
 
@@ -10,12 +10,13 @@ import { createInterface } from 'node:readline/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import pc from 'picocolors';
-import * as git from '@expo-bisect/git';
+import * as git from '@mobile-bisect/git';
 import { loadRunner } from '../adapters.js';
 import type { InitOptions } from '../args.js';
-import { findConfig, loadConfig, writeConfig, type ExpoBisectConfig } from '../config.js';
+import { findConfig, loadConfig, writeConfig, type MobileBisectConfig } from '../config.js';
 import { messageOf } from '../errors.js';
 import { findFlowFile, loadFlow } from '../flow.js';
+import { detectFrameworks, type DetectionSummary, type FrameworkName } from '../frameworks.js';
 import { ensureToolDirIgnored } from '../run.js';
 
 type Status = 'pass' | 'warn' | 'fail';
@@ -39,25 +40,31 @@ const BUILD_DIRS = [
   'dist',
   'ios/build/Build/Products/Debug-iphonesimulator',
   'ios/build/Build/Products/Release-iphonesimulator',
-  '.expo-bisect/build',
+  '.mobile-bisect/build',
 ];
 
 export async function initCommand(opts: InitOptions): Promise<number> {
   const repo = path.resolve(opts.cwd);
   const checks: Check[] = [];
 
-  process.stdout.write(`\n  ${pc.bold('expo-bisect init')}  ${pc.dim(repo)}\n\n`);
+  process.stdout.write(`\n  ${pc.bold('mobile-bisect init')}  ${pc.dim(repo)}\n\n`);
 
   checks.push(await checkGit(repo));
-  const expo = await checkExpoProject(repo);
-  checks.push(expo.check);
+  const { config } = await loadConfig(repo);
+  const framework = await checkFramework(repo, config);
+  checks.push(framework.check);
   checks.push(await checkRevyl());
 
-  const { config } = await loadConfig(repo);
-  const build = await checkBuild(repo, config, opts);
+  const build = await checkBuild(repo, config, opts, framework.name);
   checks.push(build.check);
 
-  checks.push(await checkConfig(repo, opts, { flowPath: undefined, build: build.appPath }));
+  checks.push(
+    await checkConfig(repo, opts, {
+      flowPath: undefined,
+      build: build.appPath,
+      framework: framework.name,
+    }),
+  );
   const flow = await checkFlow(repo, opts, config);
   checks.push(flow.check);
 
@@ -65,7 +72,12 @@ export async function initCommand(opts: InitOptions): Promise<number> {
   if (flow.flowPath || build.appPath) {
     await writeConfig(
       repo,
-      configFrom(repo, config, { flowPath: flow.flowPath, appPath: build.appPath, expect: flow.expect }),
+      configFrom(repo, config, {
+        flowPath: flow.flowPath,
+        appPath: build.appPath,
+        expect: flow.expect,
+        framework: framework.name,
+      }),
       { force: true },
     );
   }
@@ -93,10 +105,10 @@ export async function initCommand(opts: InitOptions): Promise<number> {
   if (failed === 0) {
     process.stdout.write(`  ${pc.dim('Try it offline first:')}\n`);
     process.stdout.write(
-      `    ${pc.cyan(`expo-bisect run --good <last-good-ref> --bad HEAD --dry-run`)}\n\n`,
+      `    ${pc.cyan(`mobile-bisect run --good <last-good-ref> --bad HEAD --dry-run`)}\n\n`,
     );
   } else {
-    process.stdout.write(`  ${pc.dim('Fix the failures above, then run `expo-bisect init` again.')}\n\n`);
+    process.stdout.write(`  ${pc.dim('Fix the failures above, then run `mobile-bisect init` again.')}\n\n`);
   }
   return failed === 0 ? 0 : 1;
 }
@@ -109,7 +121,7 @@ async function checkGit(repo: string): Promise<Check> {
       label: 'git repository',
       status: 'fail',
       detail: 'not a git repository',
-      fix: 'Run expo-bisect from inside your app repo, or pass --cwd <dir>.',
+      fix: 'Run mobile-bisect from inside your app repo, or pass --cwd <dir>.',
     };
   }
   try {
@@ -124,60 +136,63 @@ async function checkGit(repo: string): Promise<Check> {
   }
 }
 
-async function checkExpoProject(repo: string): Promise<{ check: Check; name?: string }> {
-  const pkgPath = path.join(repo, 'package.json');
-  let pkg: { name?: string; dependencies?: Record<string, string>; devDependencies?: Record<string, string> };
-  try {
-    pkg = JSON.parse(await readFile(pkgPath, 'utf8')) as typeof pkg;
-  } catch {
+/**
+ * Which adapter will prepare candidates, and what that will cost.
+ *
+ * Being explicit about the cost here matters: an Expo project bisects in
+ * seconds per round, an Xcode or Gradle project in minutes. A user who reads
+ * "compiled per candidate" up front is not surprised twenty minutes in.
+ */
+async function checkFramework(
+  repo: string,
+  config: MobileBisectConfig,
+): Promise<{ check: Check; name?: FrameworkName }> {
+  const summary = await detectFrameworks({ projectRoot: repo, config });
+  const requested = config.framework && config.framework !== 'auto' ? config.framework : undefined;
+  const chosen = requested
+    ? summary.considered.find((c) => c.name === requested)
+    : summary.picked;
+
+  if (!chosen) {
     return {
       check: {
-        label: 'Expo project',
+        label: 'framework',
         status: 'fail',
-        detail: 'no package.json here',
-        fix: 'Point --cwd at the directory holding your app package.json.',
+        detail: requested ? `\`${requested}\` is unavailable` : 'could not tell what kind of app this is',
+        fix: firstReason(summary) ?? 'Set `framework` in mobile-bisect.config.ts.',
       },
     };
   }
 
-  const expoVersion = pkg.dependencies?.expo ?? pkg.devDependencies?.expo;
-  const appConfig = await firstExisting(repo, [
-    'app.config.ts',
-    'app.config.js',
-    'app.config.mjs',
-    'app.json',
-  ]);
+  if (!chosen.detection.ok) {
+    return {
+      check: {
+        label: 'framework',
+        status: 'fail',
+        detail: `${chosen.adapter.displayName} — not ready`,
+        fix: chosen.detection.reason,
+      },
+      name: chosen.name,
+    };
+  }
 
-  if (!expoVersion) {
-    return {
-      check: {
-        label: 'Expo project',
-        status: 'warn',
-        detail: `${pkg.name ?? 'project'} — no \`expo\` dependency found`,
-        fix: 'expo-bisect targets Expo apps; a bare React Native app may still work with a custom runner.',
-      },
-      name: pkg.name,
-    };
-  }
-  if (!appConfig) {
-    return {
-      check: {
-        label: 'Expo project',
-        status: 'warn',
-        detail: `${pkg.name ?? 'project'} (expo ${expoVersion}) — no app.json / app.config.*`,
-        fix: 'Add an app config so the runner can identify the app it is launching.',
-      },
-      name: pkg.name,
-    };
-  }
+  const cost =
+    chosen.adapter.candidateKind === 'binary'
+      ? 'compiled per candidate'
+      : 'JavaScript swapped per candidate';
   return {
     check: {
-      label: 'Expo project',
+      label: 'framework',
       status: 'pass',
-      detail: `${pkg.name ?? 'project'} ${pc.dim(`(expo ${expoVersion}) · ${path.basename(appConfig)}`)}`,
+      detail: `${pc.bold(chosen.adapter.displayName)} ${pc.dim(`· ${chosen.detection.summary ?? ''} · ${cost}`)}`,
+      fix: requested ? undefined : `Pin it with \`framework: '${chosen.name}'\` if detection ever guesses wrong.`,
     },
-    name: pkg.name,
+    name: chosen.name,
   };
+}
+
+function firstReason(summary: DetectionSummary): string | undefined {
+  return summary.considered.find((c) => c.detection.reason)?.detection.reason;
 }
 
 async function checkRevyl(): Promise<Check> {
@@ -202,11 +217,27 @@ async function checkRevyl(): Promise<Check> {
   }
 }
 
+/**
+ * Only a bundle-swapping adapter needs a binary up front: it points an
+ * already-installed dev client at each candidate's JavaScript, so something has
+ * to have installed that dev client. The native adapters compile their own.
+ */
 async function checkBuild(
   repo: string,
-  config: ExpoBisectConfig,
+  config: MobileBisectConfig,
   opts: InitOptions,
+  framework?: FrameworkName,
 ): Promise<{ check: Check; appPath?: string }> {
+  if (framework === 'xcode' || framework === 'gradle') {
+    return {
+      check: {
+        label: 'app binary',
+        status: 'pass',
+        detail: pc.dim('built from source for every candidate'),
+      },
+    };
+  }
+
   const configured = config.build?.appPath;
   if (configured && (await exists(path.resolve(repo, configured)))) {
     return {
@@ -249,7 +280,7 @@ async function checkBuild(
         label: 'simulator build',
         status: 'warn',
         detail: `nothing at ${answer}`,
-        fix: 'Set build.appPath in expo-bisect.config.ts once the build exists.',
+        fix: 'Set build.appPath in mobile-bisect.config.ts once the build exists.',
       },
     };
   }
@@ -267,12 +298,12 @@ async function checkBuild(
 async function checkConfig(
   repo: string,
   opts: InitOptions,
-  extra: { flowPath?: string; build?: string },
+  extra: { flowPath?: string; build?: string; framework?: FrameworkName },
 ): Promise<Check> {
   const existing = await findConfig(repo);
   if (existing && !opts.force) {
     return {
-      label: 'expo-bisect.config.ts',
+      label: 'mobile-bisect.config.ts',
       status: 'pass',
       detail: `${path.basename(existing)} ${pc.dim('already present (--force to rewrite)')}`,
     };
@@ -280,11 +311,15 @@ async function checkConfig(
   const { config } = await loadConfig(repo);
   const written = await writeConfig(
     repo,
-    configFrom(repo, config, { flowPath: extra.flowPath, appPath: extra.build }),
+    configFrom(repo, config, {
+      flowPath: extra.flowPath,
+      appPath: extra.build,
+      framework: extra.framework,
+    }),
     { force: true },
   );
   return {
-    label: 'expo-bisect.config.ts',
+    label: 'mobile-bisect.config.ts',
     status: 'pass',
     detail: written.written ? 'written' : 'unchanged',
   };
@@ -293,7 +328,7 @@ async function checkConfig(
 async function checkFlow(
   repo: string,
   opts: InitOptions,
-  config: ExpoBisectConfig,
+  config: MobileBisectConfig,
 ): Promise<{ check: Check; flowPath?: string; expect?: string }> {
   let target = opts.flow ?? config.flow;
   let resolved = target ? path.resolve(repo, target) : await findFlowFile(repo);
@@ -353,22 +388,28 @@ async function checkFlow(
 
 function configFrom(
   repo: string,
-  existing: ExpoBisectConfig,
-  extra: { flowPath?: string; appPath?: string; expect?: string },
-): ExpoBisectConfig {
-  const config: ExpoBisectConfig = {
+  existing: MobileBisectConfig,
+  extra: { flowPath?: string; appPath?: string; expect?: string; framework?: FrameworkName },
+): MobileBisectConfig {
+  const framework = extra.framework ?? frameworkOf(existing);
+  const platform = existing.platform ?? (framework === 'gradle' ? 'android' : 'ios');
+  const config: MobileBisectConfig = {
     flow: extra.flowPath ?? existing.flow ?? 'flows/checkout.yaml',
     expect: extra.expect ?? existing.expect,
-    platform: existing.platform ?? 'ios',
-    deviceModel: existing.deviceModel ?? 'iPhone 15 Pro',
-    osVersion: existing.osVersion ?? '17.5',
+    ...(framework ? { framework } : {}),
+    platform,
+    deviceModel: existing.deviceModel ?? (platform === 'android' ? 'Pixel 7' : 'iPhone 15 Pro'),
+    osVersion: existing.osVersion ?? (platform === 'android' ? '14' : '17.5'),
     maxCandidates: existing.maxCandidates ?? 64,
   };
   const appPath = extra.appPath ?? existing.build?.appPath;
-  if (appPath || existing.build?.buildId) {
-    config.build = { appPath, buildId: existing.build?.buildId };
-  }
+  const build = { ...existing.build, ...(appPath ? { appPath } : {}) };
+  if (Object.values(build).some((v) => v !== undefined)) config.build = build;
   return config;
+}
+
+function frameworkOf(config: MobileBisectConfig): FrameworkName | undefined {
+  return config.framework && config.framework !== 'auto' ? config.framework : undefined;
 }
 
 async function findBuild(repo: string): Promise<string | undefined> {

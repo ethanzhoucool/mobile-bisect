@@ -1,8 +1,8 @@
 /**
- * `expo-bisect.config.ts` support.
+ * `mobile-bisect.config.ts` support.
  *
- * The config is a TypeScript file because that is what an Expo project expects
- * to see, but Node 18 cannot import one. Rather than pull in a transpiler we
+ * The config is a TypeScript file because that is what a JavaScript project
+ * expects to see, but Node 18 cannot import one. Rather than pull in a transpiler we
  * read the object literal directly — the file we write is always a single
  * `defineConfig({...})` call, and hand-edits stay within that shape.
  */
@@ -11,16 +11,55 @@ import { readFile, writeFile, access } from 'node:fs/promises';
 import path from 'node:path';
 import { CliError } from './errors.js';
 
-export interface ExpoBisectConfig {
+/**
+ * How a candidate commit becomes something runnable. Which fields matter
+ * depends on the framework; the rest are ignored, so one config can describe a
+ * repo that gets bisected on both platforms.
+ */
+export interface BuildConfig {
+  /** Prebuilt simulator app (.app) or an existing Revyl build id. */
+  appPath?: string;
+  buildId?: string;
+  /** Subdirectory holding the native project, e.g. `ios` or `android`. */
+  projectDir?: string;
+  /** Per-candidate build budget, in seconds. Native builds want minutes. */
+  timeout?: number;
+
+  // --- xcode ---
+  /** `.xcworkspace` basename. Detected when there is exactly one. */
+  workspace?: string;
+  /** `.xcodeproj` basename, used when there is no workspace. */
+  project?: string;
+  /** Required when the project shares more than one scheme. */
+  scheme?: string;
+  /** Default `Debug`. */
+  configuration?: string;
+  sdk?: string;
+  destination?: string;
+
+  // --- gradle ---
+  /** Gradle module to assemble. Default `app`. */
+  module?: string;
+  /** Build variant. Default `debug`. */
+  variant?: string;
+  /** Overrides module+variant, e.g. `:app:assembleFreeDebug`. */
+  task?: string;
+}
+
+export interface MobileBisectConfig {
   /** Default flow, relative to the project root. */
   flow?: string;
   /** Default natural-language assertion. */
   expect?: string;
+  /**
+   * Which adapter prepares candidates. Omit (or `auto`) to detect it: Expo
+   * swaps JavaScript, xcode and gradle compile a binary per commit.
+   */
+  framework?: 'auto' | 'expo' | 'xcode' | 'gradle';
   platform?: 'ios' | 'android';
   deviceModel?: string;
   osVersion?: string;
-  /** Simulator development build (.app) or an EAS build id. */
-  build?: { appPath?: string; buildId?: string };
+  build?: BuildConfig;
   appId?: string;
   maxCandidates?: number;
   concurrency?: number;
@@ -30,14 +69,14 @@ export interface ExpoBisectConfig {
 }
 
 export const CONFIG_FILENAMES = [
-  'expo-bisect.config.ts',
-  'expo-bisect.config.mts',
-  'expo-bisect.config.js',
-  'expo-bisect.config.mjs',
-  'expo-bisect.config.json',
+  'mobile-bisect.config.ts',
+  'mobile-bisect.config.mts',
+  'mobile-bisect.config.js',
+  'mobile-bisect.config.mjs',
+  'mobile-bisect.config.json',
 ];
 
-export function defineConfig(config: ExpoBisectConfig): ExpoBisectConfig {
+export function defineConfig(config: MobileBisectConfig): MobileBisectConfig {
   return config;
 }
 
@@ -49,18 +88,18 @@ export async function findConfig(cwd: string): Promise<string | undefined> {
   return undefined;
 }
 
-export async function loadConfig(cwd: string): Promise<{ config: ExpoBisectConfig; path?: string }> {
+export async function loadConfig(cwd: string): Promise<{ config: MobileBisectConfig; path?: string }> {
   const file = await findConfig(cwd);
   if (!file) return { config: {} };
 
   if (file.endsWith('.json')) {
-    return { config: JSON.parse(await readFile(file, 'utf8')) as ExpoBisectConfig, path: file };
+    return { config: JSON.parse(await readFile(file, 'utf8')) as MobileBisectConfig, path: file };
   }
 
   // A JS config can just be imported; a TS one is read as a literal.
   if (file.endsWith('.js') || file.endsWith('.mjs')) {
     try {
-      const mod = (await import(`file://${file}`)) as { default?: ExpoBisectConfig };
+      const mod = (await import(`file://${file}`)) as { default?: MobileBisectConfig };
       if (mod.default) return { config: mod.default, path: file };
     } catch {
       // fall through to the literal reader
@@ -80,14 +119,14 @@ export async function loadConfig(cwd: string): Promise<{ config: ExpoBisectConfi
 
 export async function writeConfig(
   cwd: string,
-  config: ExpoBisectConfig,
+  config: MobileBisectConfig,
   opts: { force?: boolean } = {},
 ): Promise<{ path: string; written: boolean }> {
-  const target = path.join(cwd, 'expo-bisect.config.ts');
+  const target = path.join(cwd, 'mobile-bisect.config.ts');
   if (!opts.force && (await exists(target))) return { path: target, written: false };
 
   const body = [
-    `import { defineConfig } from 'expo-bisect';`,
+    `import { defineConfig } from 'mobile-bisect';`,
     ``,
     `export default defineConfig({`,
     ...renderEntries(config as unknown as Record<string, unknown>, '  '),
@@ -117,7 +156,7 @@ function renderEntries(value: Record<string, unknown>, indent: string): string[]
 // --- literal reader --------------------------------------------------------
 
 /** Reads the object literal out of `defineConfig({...})` / `export default {...}`. */
-export function readConfigLiteral(source: string): ExpoBisectConfig {
+export function readConfigLiteral(source: string): MobileBisectConfig {
   const stripped = stripComments(source);
   const marker = /defineConfig\s*\(\s*|export\s+default\s*/g;
   let start = -1;
@@ -136,7 +175,7 @@ export function readConfigLiteral(source: string): ExpoBisectConfig {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new Error('the config default export must be an object');
   }
-  return value as ExpoBisectConfig;
+  return value as MobileBisectConfig;
 }
 
 function stripComments(src: string): string {

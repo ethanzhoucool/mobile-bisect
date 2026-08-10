@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { FlowStep } from '@expo-bisect/core';
+import type { FlowStep } from '@mobile-bisect/core';
 import * as cli from './cli-adapter.js';
 import { UnsupportedStepError } from './errors.js';
 import { fail, fixtureText, ok, recordedErrors } from './fixtures.testutil.js';
@@ -198,5 +198,59 @@ describe('parsing recorded CLI output', () => {
   it('recovers JSON that the CLI prefixed with progress chatter', () => {
     const res = fail({ code: 0, stderr: '', stdout: `Starting…\n${fixtureText('device-start')}` });
     expect(cli.parseSessionInfo(res)?.index).toBe(0);
+  });
+});
+
+describe('build upload', () => {
+  it('uploads a file for a platform and never moves the app to it', () => {
+    const args = cli.buildUploadArgs({
+      filePath: '/tmp/Orbit.app.zip',
+      platform: 'ios',
+      appId: 'app_1',
+      version: '8d4c2f1',
+    });
+
+    expect(args.slice(0, 2)).toEqual(['build', 'upload']);
+    expect(args).toContain('--file');
+    expect(args).toContain('/tmp/Orbit.app.zip');
+    expect(args).toContain('--platform');
+    expect(args).toContain('ios');
+    expect(args).toContain('--app');
+    expect(args).toContain('--version');
+    expect(args).toContain('8d4c2f1');
+    // A bisect uploads once per candidate; promoting each one would leave the
+    // user's app pinned to whichever commit happened to be tested last.
+    expect(args).toContain('--no-set-current');
+    expect(args).toContain('--json');
+  });
+
+  it('omits the optional flags it was not given', () => {
+    const args = cli.buildUploadArgs({ filePath: '/tmp/app.apk', platform: 'android' });
+    expect(args).not.toContain('--app');
+    expect(args).not.toContain('--version');
+    expect(args).toContain('android');
+  });
+
+  it('reads the build id out of the upload response', () => {
+    const parsed = cli.parseUploadedBuild(ok('build-upload'));
+    expect(parsed?.buildId).toBe('509b8cac-7be8-448b-a31d-74591245cdcf');
+    expect(parsed?.version).toBe('8d4c2f1');
+  });
+
+  it('accepts a flat response as well as a nested one', () => {
+    const flat = { argv: [], code: 0, stderr: '', durationMs: 1, timedOut: false };
+    expect(
+      cli.parseUploadedBuild({ ...flat, stdout: '{"build_version_id":"bv_1","version":"abc"}' }),
+    ).toEqual({ buildId: 'bv_1', version: 'abc' });
+    expect(cli.parseUploadedBuild({ ...flat, stdout: '{"id":"bv_2"}' })).toEqual({ buildId: 'bv_2' });
+  });
+
+  it('is undefined when the response carries no id at all', () => {
+    const res = { argv: [], code: 0, stderr: '', durationMs: 1, timedOut: false, stdout: '{"ok":true}' };
+    expect(cli.parseUploadedBuild(res)).toBeUndefined();
+  });
+
+  it('is undefined when the CLI printed nothing parseable', () => {
+    expect(cli.parseUploadedBuild(fail({ stderr: 'boom', stdout: 'not json' }))).toBeUndefined();
   });
 });
