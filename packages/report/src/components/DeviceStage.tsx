@@ -12,6 +12,14 @@ export interface DeviceStageProps {
   parallel: number;
 }
 
+/**
+ * Local copies before presigned URLs: they never expire, and their filenames
+ * carry the step number the playhead uses to pick a frame.
+ */
+function framesOf(result?: { localPaths?: string[]; screenshots?: string[] }): string[] | undefined {
+  return result?.localPaths?.length ? result.localPaths : result?.screenshots;
+}
+
 export function DeviceStage({ state, height, parallel }: DeviceStageProps) {
   const candidateSha = state.running?.sha ?? state.candidateSha;
   const candidate = candidateSha ? state.commits[state.indexOf.get(candidateSha) ?? -1] : undefined;
@@ -37,7 +45,7 @@ export function DeviceStage({ state, height, parallel }: DeviceStageProps) {
         step={step}
         reason={candidateResult?.reason}
         videoUrl={candidateResult?.videoUrl}
-        frames={candidateResult?.screenshots}
+        frames={framesOf(candidateResult)}
         phoneWidth={phoneWidth}
         width={cardWidth}
         anchor={st === 'bad' ? 'bad-phone' : undefined}
@@ -75,7 +83,7 @@ export function DeviceStage({ state, height, parallel }: DeviceStageProps) {
         step={lastStep}
         reason={r.reason}
         videoUrl={r.videoUrl}
-        frames={r.screenshots}
+        frames={framesOf(r)}
         phoneWidth={phoneWidth}
         width={cardWidth}
         dim

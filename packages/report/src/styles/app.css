@@ -532,7 +532,10 @@ body {
 
 .cmp-row {
   display: flex;
-  gap: 96px;
+  /* The two phones are the comparison. Holding them close enough to read as a
+     pair matters more than the symmetry of the outer columns, so the gutter
+     between them is tighter than the gutter to the labels. */
+  gap: 40px;
   align-items: flex-start;
   justify-content: center;
 }
@@ -547,11 +550,11 @@ body {
   flex-direction: row-reverse;
 }
 .cmp-label {
-  width: 246px;
+  width: 262px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding-top: 4px;
+  gap: 6px;
+  padding-top: 10px;
   text-align: right;
 }
 .cmp-side[data-tone='bad'] .cmp-label {
@@ -572,18 +575,26 @@ body {
   color: #5f6a7d;
 }
 .cmp-reason {
-  margin-top: 14px;
-  font-size: 17px;
-  line-height: 1.45;
-  color: var(--muted);
+  margin-top: 16px;
+  font-size: 17.5px;
+  line-height: 1.5;
+  /* This sentence is why the commit was classified. It read as a footnote at
+     muted grey; it is the evidence. */
+  color: #a6b0c0;
   border-top: 1px solid var(--line);
-  padding-top: 12px;
+  padding-top: 13px;
+}
+/* Tint the rule toward each side's verdict so the eye pairs text with phone. */
+.cmp-side[data-tone='good'] .cmp-reason {
+  border-top-color: rgba(53, 214, 154, 0.28);
+}
+.cmp-side[data-tone='bad'] .cmp-reason {
+  border-top-color: rgba(255, 92, 114, 0.3);
 }
 
 .cmp-diff-toggle {
-  position: absolute;
-  right: -236px;
-  top: -2px;
+  justify-self: end;
+  align-self: center;
   font-size: 16px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -606,10 +617,13 @@ body {
   width: 840px;
   margin-top: 22px;
 }
+/* Three columns so the readout stays optically centred while the diff toggle
+   sits at the right edge. Absolutely positioning the toggle put it on top of
+   the step label as soon as a label got long. */
 .cmp-play-head {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: baseline;
-  justify-content: center;
   gap: 14px;
   font-size: 20px;
 }
@@ -710,7 +724,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 40px;
-  padding: 10px 28px;
+  padding: 16px 28px 10px;
   border-bottom: 1px solid var(--line-soft);
 }
 /* The tabs stay put while a long diagnosis scrolls under them. */
@@ -730,18 +744,98 @@ body {
 .drawer-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 10px;
   flex: none;
 }
+
+/* Underline rather than a filled pill: this is a content-heavy technical
+   panel, and a sliding rule reads as navigation without competing with the
+   evidence for contrast. */
+.drawer-tablist {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--line);
+}
 .drawer-tab {
-  font-size: 18px;
-  padding: 8px 15px;
-  border-radius: 7px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  /* Equal widths so the sliding rule can be a simple percentage translate. */
+  flex: 1 0 92px;
+  justify-content: center;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  padding: 9px 14px 11px;
   color: var(--muted);
+  background: none;
+  transition: color 180ms var(--ease-out);
+}
+.drawer-tab:hover {
+  color: #c2ccd9;
 }
 .drawer-tab[data-on='true'] {
+  /* Never colour alone: weight carries the state too. */
   color: var(--text);
-  background: #1e242e;
+  font-weight: 600;
+}
+.drawer-tab[data-empty='true'][data-on='false'] {
+  color: #4d5666;
+}
+.drawer-tab:focus-visible {
+  outline: 2px solid var(--active);
+  outline-offset: -3px;
+  border-radius: 6px;
+}
+.drawer-tab-count {
+  font-size: 13px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: #1c222b;
+  color: #7e8899;
+}
+.drawer-tab[data-on='true'] .drawer-tab-count {
+  background: #232b36;
+  color: #aeb9c8;
+}
+.drawer-tab-rule {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 2px;
+  transition: transform 280ms var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-tab-rule {
+    transition: none;
+  }
+}
+
+/* Grabber. Small, centred, and the whole strip is the hit area. */
+.drawer-grab {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  background: none;
+  cursor: pointer;
+}
+.drawer-grab span {
+  width: 44px;
+  height: 3px;
+  border-radius: 999px;
+  background: #29313c;
+  transition: background 180ms var(--ease-out);
+}
+.drawer-grab:hover span {
+  background: #3a4452;
 }
 .drawer-toggle {
   width: 38px;
@@ -837,8 +931,18 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
   padding-top: 2px;
+}
+/* Two verdicts read as a pair, so they get equal columns rather than stacking
+   into a list the eye has to scan twice. */
+@media (min-width: 900px) {
+  .ev-regions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 34px;
+    align-content: start;
+  }
 }
 .ev-region {
   border-left: 3px solid var(--culprit);
@@ -1083,6 +1187,8 @@ body {
 }
 
 .cmp-play-mode {
+  white-space: nowrap;
+  justify-self: start;
   font-size: 15px;
   color: #5f6a7d;
   letter-spacing: 0.16em;
@@ -1093,4 +1199,80 @@ body {
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+/* An honest stand-in for a step the run never captured. Deliberately plain:
+   it must never be mistaken for a screen the app rendered. */
+.phone-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #0d1116;
+  color: var(--muted);
+  text-align: center;
+  padding: 0 12%;
+}
+.phone-empty-mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px dashed #39424f;
+}
+.phone-empty[data-assert='fail'] .phone-empty-mark {
+  border-color: rgba(255, 92, 114, 0.5);
+}
+.phone-empty[data-assert='pass'] .phone-empty-mark {
+  border-color: rgba(53, 214, 154, 0.45);
+}
+
+/* Empty evidence tab. Quiet by design: this is an absence, not an error. */
+.ev-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 18px 2px;
+  max-width: 62ch;
+}
+.ev-empty-what {
+  margin: 0;
+  font-size: 17px;
+  color: var(--text-2, #8c96a8);
+}
+.ev-empty-hint {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.ev-empty-hint code {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 0.94em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #171d25;
+  color: #9aa5b5;
+}
+
+/* The live readout: step number, its label, and the slow-motion flag, kept as
+   one centred unit so the grid's outer columns can hold chrome. */
+.cmp-play-now {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  white-space: nowrap;
+}
+
+/* A captured frame fills its window rather than being positioned like the
+   drawn store: the two are different geometries and only one is real. */
+.crop > .crop-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 34%;
 }

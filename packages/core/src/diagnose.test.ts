@@ -120,7 +120,7 @@ describe('diagnose', () => {
       diff: GATED_NAV_DIFF,
     });
     expect(d.likely).toBe(true);
-    expect(d.sentence).toContain('re-run those two commits');
+    expect(d.sentence).toContain('Re-run those two commits');
   });
 
   // The Orbit Store regression: the request still succeeds, only the envelope

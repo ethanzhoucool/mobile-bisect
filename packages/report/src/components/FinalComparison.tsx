@@ -32,6 +32,7 @@ function Side({
   commit,
   result,
   pos,
+  totalSteps,
   phoneWidth,
   diff,
   anchor,
@@ -41,13 +42,14 @@ function Side({
   commit: CommitSummary;
   result?: CommitResult;
   pos: number;
+  totalSteps: number;
   phoneWidth: number;
   diff?: boolean;
   anchor?: string;
 }) {
   const verdict = tone === 'good' ? 'pass' : 'fail';
   const screen = screenForStep(pos, verdict);
-  const asserted = pos >= 7;
+  const asserted = pos >= totalSteps;
   return (
     <div className="cmp-side" data-tone={tone}>
       <div className="cmp-label">
@@ -67,8 +69,11 @@ function Side({
         >
           <PhoneScreen
             videoUrl={result?.videoUrl}
-            frames={result?.screenshots}
+            /* Local copies carry the step number in their filename, so the
+               playhead can land on the frame a step actually produced. */
+            frames={result?.localPaths?.length ? result.localPaths : result?.screenshots}
             pos={pos}
+            totalSteps={totalSteps}
             screen={screen}
             assert={asserted ? verdict : null}
             diff={diff && tone === 'bad' && asserted}
@@ -94,7 +99,9 @@ export function FinalComparison({
   onScrubStep,
 }: FinalComparisonProps) {
   const phoneWidth = Math.round(clamp((height - PLAY_H - GAPS) / 2.06, 168, 300));
-  const shown = clamp(Math.ceil(pos), 1, 7);
+  // The flow's real length, not a number baked in for one demo.
+  const totalSteps = Math.max(1, stepLabels.length);
+  const shown = clamp(Math.ceil(pos), 1, totalSteps);
   const label = stepLabels[shown - 1] ?? '';
 
   return (
@@ -106,6 +113,7 @@ export function FinalComparison({
           commit={goodCommit}
           result={goodResult}
           pos={pos}
+          totalSteps={totalSteps}
           phoneWidth={phoneWidth}
         />
         <Side
@@ -114,6 +122,7 @@ export function FinalComparison({
           commit={badCommit}
           result={badResult}
           pos={pos}
+          totalSteps={totalSteps}
           phoneWidth={phoneWidth}
           diff={diff}
           anchor="cmp-fail"
@@ -123,27 +132,31 @@ export function FinalComparison({
       <div className="cmp-play">
         <div className="cmp-play-head">
           <span className="micro cmp-play-mode">synchronized step replay</span>
-          <span className="mono cmp-play-n">{shown} / 7</span>
-          <span className="cmp-play-label">{label}</span>
-          {slowmo && <span className="mono cmp-slow">0.5×</span>}
+          <span className="cmp-play-now">
+            <span className="mono cmp-play-n">
+              {shown} / {totalSteps}
+            </span>
+            <span className="cmp-play-label">{label}</span>
+            {slowmo && <span className="mono cmp-slow">0.5×</span>}
+          </span>
+          <button className="cmp-diff-toggle mono" data-on={diff} onClick={onToggleDiff}>
+            visual diff {diff ? 'on' : 'off'}
+          </button>
         </div>
         <div className="cmp-track">
-          <div className="cmp-track-fill" style={{ width: `${(pos / 7) * 100}%` }} />
+          <div className="cmp-track-fill" style={{ width: `${(pos / totalSteps) * 100}%` }} />
           {stepLabels.map((l, i) => (
             <button
               key={l + i}
               className="cmp-tick"
-              style={{ left: `${((i + 1) / 7) * 100}%` }}
+              style={{ left: `${((i + 1) / totalSteps) * 100}%` }}
               data-on={pos >= i + 1}
               onClick={() => onScrubStep(i + 1)}
               aria-label={l}
             />
           ))}
-          <div className="cmp-play-dot" style={{ left: `${(pos / 7) * 100}%` }} data-slow={slowmo} />
+          <div className="cmp-play-dot" style={{ left: `${(pos / totalSteps) * 100}%` }} data-slow={slowmo} />
         </div>
-        <button className="cmp-diff-toggle mono" data-on={diff} onClick={onToggleDiff}>
-          visual diff {diff ? 'on' : 'off'}
-        </button>
       </div>
     </div>
   );

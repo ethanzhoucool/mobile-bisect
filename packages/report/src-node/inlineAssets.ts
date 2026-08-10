@@ -84,12 +84,18 @@ export async function inlineFrames(
   const first: string[] = [];
   const rest: string[] = [];
   for (const ev of events) {
-    const e = ev as { type?: string; result?: { sha?: string; screenshots?: unknown } };
+    const e = ev as {
+      type?: string;
+      result?: { sha?: string; screenshots?: unknown; localPaths?: unknown };
+    };
     if (e?.type !== 'commit.completed') continue;
-    const shots = e.result?.screenshots;
-    if (!Array.isArray(shots)) continue;
     const bucket = priority.has(e.result?.sha ?? '') ? first : rest;
-    for (const s of shots) if (typeof s === 'string' && !s.startsWith('data:')) bucket.push(s);
+    // Local copies first: they are already on disk, they never expire, and
+    // their filenames carry the step number the playhead needs.
+    for (const list of [e.result?.localPaths, e.result?.screenshots]) {
+      if (!Array.isArray(list)) continue;
+      for (const s of list) if (typeof s === 'string' && !s.startsWith('data:')) bucket.push(s);
+    }
   }
 
   const queue = [...new Set([...first, ...rest])];

@@ -26,6 +26,11 @@ const RAIL_PAD = 56;
 /** How long the comparison plays with the evidence open before it collapses. */
 const EVIDENCE_HOLD_MS = 13000;
 
+/** Local copies first: they never expire and they survive an offline report. */
+function captured(result?: { localPaths?: string[]; screenshots?: string[] }): string[] | undefined {
+  return result?.localPaths?.length ? result.localPaths : result?.screenshots;
+}
+
 /** Final captured frame, skipping links a file:// report can't load. */
 function lastFrame(
   frames: string[] | undefined,
@@ -38,6 +43,13 @@ function lastFrame(
   return usable[usable.length - 1];
 }
 
+/** Any run's step marks, for a report whose culprit pair captured none. */
+function firstSteps<T>(steps: Map<string, T[]>): T[] | undefined {
+  for (const marks of steps.values()) if (marks.length) return marks;
+  return undefined;
+}
+
+/** Only for a stream that carried no `flow.step` events at all. */
 const FALLBACK_STEPS = [
   'Launch Orbit Store',
   'Open featured product',
@@ -199,11 +211,34 @@ export function BisectReport({
   const badCommit = culpritIdx !== undefined ? state.commits[culpritIdx] : undefined;
   const goodResult = state.culprit ? state.results.get(state.culprit.goodSha) : undefined;
   const badResult = state.culprit ? state.results.get(state.culprit.badSha) : undefined;
-  const evidence = useMemo(() => evidenceFor(badResult, goodResult), [badResult, goodResult]);
+  // Declared after noCaptures so the drawer knows whether it may draw the fixture.
 
+  /**
+   * A report with no captured frame anywhere is the fixture or a dry run, and
+   * the illustrated store is the intended stand-in. Once any run has captured
+   * a real frame, a missing one is a gap and gets said so.
+   */
+  const noCaptures = useMemo(() => {
+    for (const r of state.results.values()) {
+      if (r.localPaths?.length || r.screenshots?.length) return false;
+    }
+    return true;
+  }, [state.results]);
+
+  const evidence = useMemo(
+    () => evidenceFor({ bad: badResult, good: goodResult, synthetic: noCaptures }),
+    [badResult, goodResult, noCaptures],
+  );
+
+  /**
+   * The flow's own step labels, whatever its length. Requiring seven of them
+   * meant every flow that was not the seven-step demo silently rendered the
+   * demo's labels instead of its own.
+   */
   const stepLabels = useMemo(() => {
-    const marks = state.culprit ? state.steps.get(state.culprit.goodSha) : undefined;
-    if (marks && marks.length >= 7) return marks.map((m) => m.label);
+    const forCulprit = state.culprit ? state.steps.get(state.culprit.goodSha) : undefined;
+    const marks = forCulprit?.length ? forCulprit : firstSteps(state.steps);
+    if (marks?.length) return marks.map((m) => m.label);
     return FALLBACK_STEPS;
   }, [state.culprit, state.steps]);
 
@@ -211,7 +246,9 @@ export function BisectReport({
   const parallelCount = parallel === true ? 4 : Number(parallel) || 0;
 
   return (
-    <MediaContext.Provider value={{ allowRemote: allowRemoteMedia, frames: frameData }}>
+    <MediaContext.Provider
+      value={{ allowRemote: allowRemoteMedia, frames: frameData, synthetic: noCaptures }}
+    >
       <div className="fit" style={{ transform: `scale(${scale})` }}>
         <div
           className="app"
@@ -278,8 +315,8 @@ export function BisectReport({
               evidence={evidence}
               goodCommit={goodCommit}
               badCommit={badCommit}
-              goodFrame={lastFrame(goodResult?.screenshots, allowRemoteMedia, frameData)}
-              badFrame={lastFrame(badResult?.screenshots, allowRemoteMedia, frameData)}
+              goodFrame={lastFrame(captured(goodResult), allowRemoteMedia, frameData)}
+              badFrame={lastFrame(captured(badResult), allowRemoteMedia, frameData)}
               height={drawerH}
             />
           )}

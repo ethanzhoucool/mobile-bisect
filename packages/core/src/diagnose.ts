@@ -96,7 +96,7 @@ export function diagnose(input: DiagnoseInput): Diagnosis {
 
   if (!boundariesTrusted) {
     return out(
-      `${shared}${subject} is the first commit where ${assertionClause} stopped holding, but one of the boundary runs was not a clean verdict — re-run those two commits before trusting this.`,
+      `${shared}${subject} is the first commit where ${assertionClause} stopped holding, but one of the boundary runs was not a clean verdict. Re-run those two commits before trusting this.`,
       true,
     );
   }
@@ -119,7 +119,7 @@ export function diagnose(input: DiagnoseInput): Diagnosis {
       ? 'it changes how the response is parsed'
       : 'that is the closest change to the failing step';
   return out(
-    `${shared}${subject} is the first commit where ${assertionClause} stopped holding; start at ${where} — ${what}.`,
+    `${shared}${subject} is the first commit where ${assertionClause} stopped holding. Start at ${where}: ${what}.`,
     true,
   );
 }

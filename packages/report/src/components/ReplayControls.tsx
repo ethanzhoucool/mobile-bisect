@@ -45,7 +45,7 @@ export function ReplayControls({
     <footer className="controls">
       {live ? (
         <button className="ctl-live mono" data-on={following} onClick={onFollow}>
-          <i /> {following ? 'following live' : 'paused — jump to live'}
+          <i /> {following ? 'following live' : 'paused, jump to live'}
         </button>
       ) : (
         <button className="ctl-play" onClick={clock.toggle} aria-label={clock.playing ? 'pause' : 'play'}>

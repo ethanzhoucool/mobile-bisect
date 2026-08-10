@@ -8,9 +8,19 @@ export interface MediaConfig {
   allowRemote: boolean;
   /** originalUrl -> data: URI, populated by renderReport for static reports. */
   frames?: Record<string, string>;
+  /**
+   * True when the whole report captured no device frames, i.e. the demo
+   * fixture or a dry run. Only then may a phone draw the illustrated store.
+   */
+  synthetic?: boolean;
 }
 
 export const MediaContext = createContext<MediaConfig>({ allowRemote: false });
+
+/** Read the fixture flag from context so no call site has to thread it. */
+function useSynthetic(): boolean {
+  return useContext(MediaContext).synthetic ?? false;
+}
 
 /**
  * Remote artifact URLs are ignored unless explicitly allowed: a static report
@@ -86,6 +96,7 @@ export function PhoneScreen({
   assert?: 'pass' | 'fail' | null;
   diff?: boolean;
 }) {
+  const synthetic = useSynthetic();
   const src = useMedia(videoUrl);
   const all = useFrames(frames);
   const [broken, setBroken] = useState(false);
@@ -113,7 +124,7 @@ export function PhoneScreen({
       <>
         <FrameStrip
           frames={strip}
-          index={frameIndexFor(pos ?? totalSteps, strip.length, totalSteps)}
+          index={frameIndexFor(pos ?? totalSteps, strip.length, totalSteps, strip)}
           assert={assert}
           onBroken={(f) => setDead((prev) => new Set(prev).add(f))}
         />
@@ -121,7 +132,25 @@ export function PhoneScreen({
       </>
     );
   }
-  return <OrbitStore screen={screen} assert={assert} diff={diff} />;
+  // No capture to show. The drawn store is the demo fixture's stand-in, and it
+  // is a different app than the one under test — rendering it for a real run
+  // would put a screen on the phone that the run never produced.
+  if (synthetic) return <OrbitStore screen={screen} assert={assert} diff={diff} />;
+  return <NoCapture assert={assert} />;
+}
+
+/**
+ * What a phone shows when the run captured nothing for this step: the fact,
+ * not a stand-in. An invented screen here is worse than an empty one, because
+ * it is indistinguishable from evidence.
+ */
+export function NoCapture({ assert }: { assert?: 'pass' | 'fail' | null }) {
+  return (
+    <div className="phone-empty" data-assert={assert ?? undefined}>
+      <span className="phone-empty-mark" aria-hidden="true" />
+      <span className="micro">no frame captured</span>
+    </div>
+  );
 }
 
 /** Semantic region diff — the two runs are the same step index, so the regions line up. */
