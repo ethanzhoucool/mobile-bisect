@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseStepOutcome, type StepOutcome } from './cli-adapter.js';
-import { classify, isInfraFailure } from './classify.js';
+import { classify, describingSentence, isInfraFailure } from './classify.js';
 import { fail, ok, recordedErrors } from './fixtures.testutil.js';
 
 const passing = () => parseStepOutcome(ok('device-validation-pass'));
@@ -122,5 +122,48 @@ describe('classify, the verdict table', () => {
     const r = classify({ assertion: passing(), stepsCompleted: 1 });
     expect(r.reason.length).toBeLessThanOrEqual(241);
     expect(r.reason).not.toContain('\n');
+  });
+});
+
+describe('describingSentence', () => {
+  it('skips a model reading the question back before answering it', () => {
+    const text =
+      'The user wants to verify if the summary screen shows the heading "Session complete" with a day streak below it. ' +
+      'The current screen shows "Couldn\'t save session" and "Your focus time was not recorded."';
+
+    expect(describingSentence(text)).toBe(
+      'The current screen shows "Couldn\'t save session" and "Your focus time was not recorded."',
+    );
+  });
+
+  it.each([
+    'We are verifying if the screen shows the total.',
+    'I need to check whether the cart is empty.',
+    'Let me look at the screen.',
+    'To verify the assertion, look at the heading.',
+    'The task is to confirm the order went through.',
+    'Checking the summary screen.',
+  ])('treats %j as run-up rather than evidence', (preamble) => {
+    const text = `${preamble} The screen shows an empty cart.`;
+    expect(describingSentence(text)).toBe('The screen shows an empty cart.');
+  });
+
+  it('keeps a description that happens to start with a similar word', () => {
+    const text = 'The user avatar is missing from the header.';
+    expect(describingSentence(text)).toBe('The user avatar is missing from the header.');
+  });
+
+  it('keeps the opener when there is nothing else, since a weak reason beats none', () => {
+    const text = 'We are verifying the screen.';
+    expect(describingSentence(text)).toBe('We are verifying the screen.');
+  });
+
+  it('still returns one sentence, not the whole transcript', () => {
+    const text = 'The screen shows an error. It also shows a retry button. And a title.';
+    expect(describingSentence(text)).toBe('The screen shows an error.');
+  });
+
+  it('clips something unreasonably long', () => {
+    expect(describingSentence(`${'x'.repeat(400)}.`, 50)).toHaveLength(50);
   });
 });

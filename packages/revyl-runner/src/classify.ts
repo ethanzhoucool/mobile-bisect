@@ -71,10 +71,35 @@ function firstSentence(text: string, max = 240): string {
   return out.length > max ? `${out.slice(0, max - 1)}…` : out;
 }
 
+/**
+ * Sentences that restate the task instead of reporting what is on screen.
+ *
+ * A model asked to judge a screen often opens by reading the question back
+ * before answering it. That opener is the assertion we supplied, not evidence,
+ * and it is the line the report prints under the culprit, so taking it
+ * verbatim turns the most important sentence in a run into an echo.
+ */
+const PREAMBLE =
+  /^(?:the user (?:wants|is asking|asked|would like)|we(?:'re| are) (?:verifying|checking|looking|asked)|i (?:need|will|should|am|have)|let me|the (?:task|goal|question|objective|request|assertion) is|to (?:verify|check|determine|confirm)|verifying|checking|confirming|first[,.]?)\b/i;
+
+/**
+ * The model's own words, minus any run-up.
+ *
+ * Falls back to the opening sentence when every sentence looks like a
+ * restatement, since a weak reason is still better than none.
+ */
+export function describingSentence(text: string, max = 240): string {
+  const trimmed = text.replace(/\s+/g, ' ').trim();
+  const parts = trimmed.split(/(?<=[.!?])\s+/).filter((p) => p.trim().length > 0);
+  const useful = parts.find((p) => !PREAMBLE.test(p.trim()));
+  const out = useful ?? parts[0] ?? trimmed;
+  return out.length > max ? `${out.slice(0, max - 1)}…` : out;
+}
+
 /** Prefer the model's own words; they read well under the device in the report. */
 function assertionReason(o: StepOutcome, fallback: string): string {
   const text = o.reasoning ?? o.statusReason;
-  return text ? firstSentence(text) : fallback;
+  return text ? describingSentence(text) : fallback;
 }
 
 export function classify(input: ClassifyInput): Classification {
