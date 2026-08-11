@@ -120,11 +120,21 @@ export async function runCommand(opts: RunOptions): Promise<number> {
 
   let commits = await enumerateCommits(repo, opts, config);
 
+  // One app id for the whole run. A flow's `appId` is a display name as often
+  // as an id, and the API takes only a UUID, so a UUID from anywhere wins.
+  // Getting this wrong is expensive rather than loud: every candidate builds
+  // and only then fails to start a device.
+  const appId = preferResolvableAppId(
+    flow.appId,
+    config.appId,
+    await appIdFromRevylConfig(repo, opts.platform),
+  );
+
   // Before anything is compiled, test the builds this app already has. It only
   // pays off for adapters that compile, and it needs the range to survive into
   // `meta`, so it runs ahead of the run store.
   if (opts.prebuilt && !opts.dryRun) {
-    commits = await narrowByExistingBuilds({ repo, commits, flow, expect, opts, config });
+    commits = await narrowByExistingBuilds({ repo, commits, flow, expect, opts, config, appId });
   }
 
   const meta = buildMeta({ opts, flow, flowPath, expect, commits, repo });
@@ -132,7 +142,8 @@ export async function runCommand(opts: RunOptions): Promise<number> {
   const store = await RunStore.create(repo, meta.runId);
   const ui = await openUi(opts, store, { port: opts.port, open: opts.open });
 
-  const runner = await buildRunner({ opts, commits, flow, config, store });
+  const runner = await buildRunner({ opts, commits, flow, config, store, appId });
+  if (!opts.dryRun) await assertAppIdUsable(appId, ui);
   const framework = await buildAdapter({ opts, config, repo, commits, ui });
 
   const sidecar: RunSidecar = {
@@ -149,7 +160,7 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     culpritSha: runner.culpritSha,
     flakySha: runner.flakySha,
     stepDelayMs: opts.stepDelayMs,
-    appId: flow.appId ?? config.appId,
+    appId,
     buildId: config.build?.buildId,
     framework: framework.name,
     command: meta.command,
@@ -173,6 +184,32 @@ export async function runCommand(opts: RunOptions): Promise<number> {
 }
 
 /**
+ * Checks the app id before a single candidate is built.
+ *
+ * A name the API cannot resolve fails at `device start`, which happens *after*
+ * the candidate has been compiled. On a four-minute build that is four minutes
+ * per commit to learn something one call could have said at the start.
+ */
+async function assertAppIdUsable(appId: string | undefined, ui: Ui): Promise<void> {
+  if (!appId) return;
+  try {
+    const api = await loadRunner();
+    const probe = api.createRevylRunner({ appId });
+    const lister = asBuildLister(probe);
+    if (!lister) return;
+    await lister.listBuilds();
+  } catch (e) {
+    throw new CliError(`Revyl cannot resolve the app \`${appId}\`.`, {
+      hint:
+        `${messageOf(e).split('\n')[0]}\n` +
+        'Set `appId` to the app\'s UUID in mobile-bisect.config.ts, or `build.app_id` in ' +
+        '.revyl/config.yaml. A display name from a flow file is not enough.',
+    });
+  }
+  ui.note(pc.dim(`  app ${appId}`));
+}
+
+/**
  * Narrows the range using builds Revyl already has, before anything compiles.
  *
  * Every test here is an install rather than a compile, so the pass is close to
@@ -187,13 +224,9 @@ async function narrowByExistingBuilds(input: {
   expect: string;
   opts: RunOptions;
   config: MobileBisectConfig;
+  appId?: string;
 }): Promise<CommitSummary[]> {
-  const { repo, commits, flow, expect, opts, config } = input;
-  const appId = preferResolvableAppId(
-    flow.appId,
-    config.appId,
-    await appIdFromRevylConfig(repo, opts.platform),
-  );
+  const { repo, commits, flow, expect, opts, config, appId } = input;
   const note = (line: string): void => {
     process.stdout.write(`${pc.dim(line)}\n`);
   };
@@ -1083,8 +1116,9 @@ async function buildRunner(input: {
   flow: FlowDefinition;
   config: MobileBisectConfig;
   store: RunStore;
+  appId?: string;
 }): Promise<{ runner: MobileRuntimeRunner; culpritSha?: string; flakySha?: string }> {
-  const { opts, commits, flow, config, store } = input;
+  const { opts, commits, flow, config, store, appId } = input;
 
   if (opts.dryRun) {
     const resolve = async (ref?: string): Promise<string | undefined> => {
@@ -1124,7 +1158,7 @@ async function buildRunner(input: {
       platform: opts.platform,
       deviceModel: opts.deviceModel ?? config.deviceModel,
       osVersion: opts.osVersion ?? config.osVersion,
-      appId: flow.appId ?? config.appId,
+      appId,
       buildId: config.build?.buildId,
       projectRoot: path.resolve(opts.cwd),
       timeoutMs: opts.timeoutMs,
