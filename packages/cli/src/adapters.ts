@@ -43,6 +43,7 @@ export interface RevylRunnerInput {
   osVersion?: string;
   platform?: 'ios' | 'android';
   buildId?: string;
+  bundleId?: string;
   appId?: string;
   projectRoot?: string;
   timeoutMs?: number;

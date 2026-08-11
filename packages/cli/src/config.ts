@@ -20,6 +20,12 @@ export interface BuildConfig {
   /** Prebuilt simulator app (.app) or an existing Revyl build id. */
   appPath?: string;
   buildId?: string;
+  /**
+   * The app's bundle id, e.g. `com.revyl.tempo`. Installing a build does not
+   * foreground it, and `revyl build list` does not report one, so a candidate
+   * taken from an existing build has no other way to know what to launch.
+   */
+  bundleId?: string;
   /** Subdirectory holding the native project, e.g. `ios` or `android`. */
   projectDir?: string;
   /** Per-candidate build budget, in seconds. Native builds want minutes. */
