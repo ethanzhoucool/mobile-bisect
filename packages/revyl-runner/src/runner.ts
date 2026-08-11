@@ -206,7 +206,10 @@ export class RevylRunner implements MobileRuntimeRunner {
   async listBuilds(): Promise<Array<{ buildId: string; version: string }>> {
     const exec = await this.exec();
     const res = await exec(cli.buildListArgs(this.opts.appId), { timeoutMs: 60_000 });
-    if (res.code !== 0) return [];
+    // An empty list and a failed call mean opposite things: one says the app
+    // has no builds, the other says we never found out. Reporting the second
+    // as the first is how an optimisation silently stops running.
+    if (res.code !== 0) throw infraFrom(res, 'build-list', 'Could not list the app\'s builds');
     return cli.parseBuildList(res);
   }
 

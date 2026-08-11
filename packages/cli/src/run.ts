@@ -40,6 +40,7 @@ import { createFakeAdapter, resolveAdapter } from './frameworks.js';
 import {
   appIdFromRevylConfig,
   buildChain,
+  preferResolvableAppId,
   narrowByBuilds,
   narrowedRange,
   resolveBuildCommits,
@@ -188,8 +189,11 @@ async function narrowByExistingBuilds(input: {
   config: MobileBisectConfig;
 }): Promise<CommitSummary[]> {
   const { repo, commits, flow, expect, opts, config } = input;
-  const appId =
-    flow.appId ?? config.appId ?? (await appIdFromRevylConfig(repo, opts.platform));
+  const appId = preferResolvableAppId(
+    flow.appId,
+    config.appId,
+    await appIdFromRevylConfig(repo, opts.platform),
+  );
   const note = (line: string): void => {
     process.stdout.write(`${pc.dim(line)}\n`);
   };

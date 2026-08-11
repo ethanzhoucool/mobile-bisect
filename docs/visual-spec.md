@@ -93,7 +93,7 @@ This is the payoff. Give it most of the screen.
 
 ```
 LAST GOOD                              FIRST BAD
-0e90887  Preserve checkout navigation  03735ed  Refactor order response handling
+dc7eedf  Preserve checkout navigation  8d29fbc  Refactor order response handling
 ```
 
 One playhead drives both recordings, synchronized. At the breaking step, playback automatically slows to 0.5× for roughly one second.

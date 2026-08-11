@@ -284,3 +284,17 @@ function appIdOn(line: string): string | undefined {
 function indentOf(line: string): number {
   return line.length - line.trimStart().length;
 }
+
+/**
+ * The app id to list builds with.
+ *
+ * A flow's `appId` is a human label as often as an id, and `revyl build list`
+ * only takes a name it can resolve or a UUID. `.revyl/config.yaml` is where a
+ * project records the real one, so a UUID from anywhere beats a bare name.
+ */
+export function preferResolvableAppId(...candidates: Array<string | undefined>): string | undefined {
+  const present = candidates.filter((c): c is string => !!c && c.trim().length > 0);
+  return present.find((c) => UUID.test(c)) ?? present[0];
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

@@ -6,6 +6,7 @@ import {
   buildChain,
   narrowedRange,
   narrowByBuilds,
+  preferResolvableAppId,
   resolveBuildCommits,
   shaCandidates,
 } from '../src/prebuilt.js';
@@ -294,5 +295,24 @@ describe('appIdFromRevylConfig', () => {
 
   it('is undefined when there is no config at all', async () => {
     expect(await appIdFromRevylConfig(dir, 'ios')).toBeUndefined();
+  });
+});
+
+describe('preferResolvableAppId', () => {
+  const uuid = '03d24580-07fe-4ae9-aede-7cdf12014b33';
+
+  it('prefers a uuid over a display name, whatever the order', () => {
+    // A flow's `appId` is a label as often as an id; `build list` needs the id.
+    expect(preferResolvableAppId('orbit-store', uuid)).toBe(uuid);
+    expect(preferResolvableAppId(uuid, 'orbit-store')).toBe(uuid);
+  });
+
+  it('falls back to the first name when there is no uuid anywhere', () => {
+    expect(preferResolvableAppId(undefined, 'orbit-store')).toBe('orbit-store');
+  });
+
+  it('ignores blanks', () => {
+    expect(preferResolvableAppId('', '   ', uuid)).toBe(uuid);
+    expect(preferResolvableAppId(undefined, '')).toBeUndefined();
   });
 });
