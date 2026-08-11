@@ -10,6 +10,8 @@ export interface DeviceStageProps {
   state: ViewState;
   height: number;
   parallel: number;
+  /** Live run: the running candidate may embed its device session. */
+  live?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ function framesOf(result?: { localPaths?: string[]; screenshots?: string[] }): s
   return result?.localPaths?.length ? result.localPaths : result?.screenshots;
 }
 
-export function DeviceStage({ state, height, parallel }: DeviceStageProps) {
+export function DeviceStage({ state, height, parallel, live }: DeviceStageProps) {
   const candidateSha = state.running?.sha ?? state.candidateSha;
   const candidate = candidateSha ? state.commits[state.indexOf.get(candidateSha) ?? -1] : undefined;
   const candidateResult = candidateSha ? state.results.get(candidateSha) : undefined;
@@ -46,6 +48,10 @@ export function DeviceStage({ state, height, parallel }: DeviceStageProps) {
         reason={candidateResult?.reason}
         videoUrl={candidateResult?.videoUrl}
         frames={framesOf(candidateResult)}
+        /* Only the candidate that is running right now, and only before it has
+           a verdict: once classified, its captured frames are the evidence and
+           the session is on its way out. */
+        liveUrl={live && !candidateResult ? state.running?.streamUrl : undefined}
         phoneWidth={phoneWidth}
         width={cardWidth}
         anchor={st === 'bad' ? 'bad-phone' : undefined}

@@ -17,6 +17,19 @@ export interface MediaConfig {
 
 export const MediaContext = createContext<MediaConfig>({ allowRemote: false });
 
+/**
+ * Only a page served from localhost may frame the session viewer, per Revyl's
+ * `frame-ancestors`. A `file://` report would render a blocked grey box.
+ */
+function canEmbed(): boolean {
+  if (typeof window === 'undefined') return false;
+  const { protocol, hostname } = window.location;
+  return (
+    (protocol === 'http:' || protocol === 'https:') &&
+    (hostname === 'localhost' || hostname === '127.0.0.1')
+  );
+}
+
 /** Read the fixture flag from context so no call site has to thread it. */
 function useSynthetic(): boolean {
   return useContext(MediaContext).synthetic ?? false;
@@ -85,6 +98,7 @@ export function PhoneScreen({
   screen,
   assert,
   diff,
+  liveUrl,
 }: {
   videoUrl?: string;
   /** Ordered per-step captures; the primary playback path. */
@@ -95,6 +109,8 @@ export function PhoneScreen({
   screen: OrbitScreen;
   assert?: 'pass' | 'fail' | null;
   diff?: boolean;
+  /** Revyl session viewer, embedded while this candidate is actually running. */
+  liveUrl?: string;
 }) {
   const synthetic = useSynthetic();
   const src = useMedia(videoUrl);
@@ -104,6 +120,24 @@ export function PhoneScreen({
   // to the drawn screen rather than showing a broken-image glyph.
   const [dead, setDead] = useState<Set<string>>(() => new Set());
   const strip = all.filter((f) => !dead.has(f));
+
+  // The device itself, while it is still running. Revyl's CSP ends with
+  // `frame-ancestors 'self' http://127.0.0.1:* http://localhost:*`, so this
+  // embeds from the live server's origin and nowhere else, which is also the
+  // only place it would mean anything: by the time the static report is
+  // opened the session is gone.
+  if (liveUrl && canEmbed()) {
+    return (
+      <iframe
+        className="phone-live"
+        src={liveUrl}
+        title="live device"
+        loading="lazy"
+        sandbox="allow-scripts allow-same-origin"
+        referrerPolicy="no-referrer-when-downgrade"
+      />
+    );
+  }
 
   // Video is the upgrade path if a runner ever hands us one.
   if (src && !broken) {
@@ -189,6 +223,8 @@ export interface DeviceCardProps {
   reason?: string;
   videoUrl?: string;
   frames?: string[];
+  /** Revyl session viewer, embedded while this candidate is still running. */
+  liveUrl?: string;
   phoneWidth: number;
   width: number;
   dim?: boolean;
@@ -205,6 +241,7 @@ export function DeviceCard({
   reason,
   videoUrl,
   frames,
+  liveUrl,
   phoneWidth,
   width,
   dim,
@@ -241,6 +278,7 @@ export function DeviceCard({
           <PhoneScreen
             videoUrl={videoUrl}
             frames={frames}
+            liveUrl={liveUrl}
             pos={done ? total : Math.max(0, idx - 0.5)}
             totalSteps={total}
             screen={screen}

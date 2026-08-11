@@ -310,7 +310,7 @@ export function BisectReport({
                 }}
               />
             ) : (
-              <DeviceStage state={state} height={stageH} parallel={parallelCount} />
+              <DeviceStage state={state} height={stageH} parallel={parallelCount} live={live} />
             )}
           </main>
 
