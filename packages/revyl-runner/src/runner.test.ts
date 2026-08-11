@@ -172,13 +172,33 @@ describe('installOrLaunch', () => {
     await expect(r.installOrLaunch({ sessionId: SESSION, bundleUrl: 'exp+orbit://x' })).resolves.toBeUndefined();
   });
 
-  it('skips the bundler error-screen check for a native candidate, which has no bundler', async () => {
-    const { executor, argvFor } = fakeCli({ 'build upload': ok('build-upload') });
+  it('checks a native candidate for a fatal screen too, since a built app can still not run', async () => {
+    const { executor, argvFor } = fakeCli({
+      'build upload': ok('build-upload'),
+      // No error screen, so the candidate is runnable and the run proceeds.
+      'device validation': { ...ok('device-validation-fail'), code: 1, stderr: 'Error: validation failed' },
+    });
     const r = runner(executor, { bundleErrorCheck: true, bundleSettleMs: 0 });
     await r.startSession({ platform: 'ios' });
     await r.installOrLaunch({ sessionId: SESSION, appPath: '/tmp/Orbit.app.zip' });
 
-    expect(argvFor('device validation')).toHaveLength(0);
+    // A dev-client build with no packager to reach compiles fine and never
+    // starts; without this the flow fails and the commit is recorded `bad`.
+    expect(argvFor('device validation')).toHaveLength(1);
+  });
+
+  it('calls a native candidate that boots to a fatal screen inconclusive, never bad', async () => {
+    const { executor } = fakeCli({
+      'build upload': ok('build-upload'),
+      // A `pass` here means the error screen IS present.
+      'device validation': ok('device-validation-pass'),
+    });
+    const r = runner(executor, { bundleErrorCheck: true, bundleSettleMs: 0 });
+    await r.startSession({ platform: 'ios' });
+
+    await expect(
+      r.installOrLaunch({ sessionId: SESSION, appPath: '/tmp/Orbit.app.zip' }),
+    ).rejects.toBeInstanceOf(RevylInfraError);
   });
 });
 

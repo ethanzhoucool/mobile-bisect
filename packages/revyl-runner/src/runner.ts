@@ -81,10 +81,18 @@ export interface RevylRunnerOptions {
   executor?: CliExecutor;
 }
 
+/**
+ * What "this build never started" looks like on screen.
+ *
+ * Covers both halves: a JS candidate whose bundle will not load, and a native
+ * candidate that built fine but cannot run standalone, which is what a
+ * dev-client build does when there is no packager for it to find.
+ */
 const DEFAULT_BUNDLE_ERROR_ASSERTION =
-  'The screen is showing a fatal loading error, a red or white JavaScript error screen, ' +
-  'a Metro bundler error, an "Unable to load script" message, or the Expo dev client ' +
-  '"Something went wrong" screen';
+  'The screen is showing a fatal loading error rather than the app itself: a red or white ' +
+  'JavaScript error screen, a Metro bundler error, an "Unable to load script" or "No script ' +
+  'URL provided" message, the Expo dev client "Something went wrong" screen, a development ' +
+  'client waiting for or searching for a development server, or a blank or crashed screen';
 
 interface SessionState {
   sessionId: string;
@@ -263,10 +271,12 @@ export class RevylRunner implements MobileRuntimeRunner {
       if (res.code !== 0) throw infraFrom(res, 'launch', 'Could not launch the app');
     }
 
-    // The error-screen check looks for a bundler failure, which only a JS
-    // candidate can have. A native binary that failed to compile never got
-    // here, so running it would only cost a screenshot and a model call.
-    if (input.bundleUrl) await this.assertBundleLoaded(exec, target);
+    // Every candidate, not just the JS ones. A compiled binary reaches this
+    // point having built successfully and can still be unrunnable: a dev
+    // client with no packager to reach, a launch crash, a blank screen. The
+    // flow would then fail its assertion and the commit would be recorded
+    // `bad`, which is a confident wrong answer about a commit that never ran.
+    await this.assertBundleLoaded(exec, target);
   }
 
   async runFlow(input: RunFlowInput): Promise<RunResult> {
