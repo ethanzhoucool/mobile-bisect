@@ -91,6 +91,39 @@ npx mobile-bisect run --good v1.4.0 --bad HEAD --flow ../flows/checkout.yaml \
 
 `--dry-run` executes the full search offline with a simulated runtime, so you can see the whole thing work before connecting a device.
 
+## The flow file
+
+A flow is the thing every candidate is put through. `label` is ours, the human
+line under the phone in the report; the rest of each step is Revyl's own step
+body and is passed to the runner untouched.
+
+```yaml
+name: checkout-flow
+expect: the order confirmation screen appears
+
+steps:
+  - label: Launch Orbit Store
+    type: validation
+    step_description: the home screen is showing, with a list of products
+
+  - label: Tap "Place order"
+    type: instructions
+    step_description: tap the "Place order" button
+
+  - label: Assert order confirmation
+    type: validation
+    step_description: the "Order confirmed" heading is visible
+```
+
+`type` is one of `instructions` (an agent acts), `validation` (an agent checks a
+claim), `extraction`, or `manual` with a `step_type` such as `tap` or `swipe`
+for a direct device verb. `step_description` is the text the device acts on.
+
+A step body that does not fit one of those shapes is rejected when the file
+loads. It used to be accepted and run as an instruction whose text was the
+step's own label, which turned an assertion into an action and let the search
+blame a commit for the result.
+
 ## What v1 covers
 
 Supported:

@@ -39,34 +39,119 @@ describe('parseFlow', () => {
         'name: f',
         'steps:',
         '  - label: Apply coupon',
-        '    type:',
-        '      target: the coupon field',
-        '      text: SAVE10',
-        '      submit: true',
+        '    type: manual',
+        '    step_type: type',
+        '    target: the coupon field',
+        '    text: SAVE10',
         '    retries: 2',
       ].join('\n'),
       'f.yaml',
     );
 
+    // Keys we have no opinion about, like `retries`, reach the runner as-is.
     expect(flow.steps[0]).toEqual({
       label: 'Apply coupon',
-      type: { target: 'the coupon field', text: 'SAVE10', submit: true },
+      type: 'manual',
+      step_type: 'type',
+      target: 'the coupon field',
+      text: 'SAVE10',
       retries: 2,
     });
   });
 
   it('points at the line of a step with no label', async () => {
     const error = await expectFlowError(
-      ['name: f', 'steps:', '  - label: Open cart', '    tap: Cart', '  - tap: Place order'].join(
-        '\n',
-      ),
+      [
+        'name: f',
+        'steps:',
+        '  - label: Open cart',
+        '    type: instructions',
+        '    step_description: tap the cart icon',
+        '  - type: instructions',
+        '    step_description: tap Place order',
+      ].join('\n'),
     );
 
-    expect(error.line).toBe(5);
-    expect(error.message).toContain('flows/checkout.yaml:5');
+    expect(error.line).toBe(6);
+    expect(error.message).toContain('flows/checkout.yaml:6');
     expect(error.message).toContain('step 2 is missing a `label`');
     // the excerpt shows the offending source line
-    expect(error.message).toContain('- tap: Place order');
+    expect(error.message).toContain('- type: instructions');
+  });
+
+  describe('a step body the runner cannot execute', () => {
+    // These used to load. `type` defaulted to `instructions` and the text fell
+    // back to the label, so the step ran as an agent instruction reading
+    // "Assert the order was placed" and the search blamed a commit for the
+    // result. A rejected file is recoverable; a wrong culprit is not.
+    it('rejects a step that never says what kind of step it is', async () => {
+      const error = await expectFlowError(
+        ['name: f', 'steps:', '  - label: Open cart', '    tap: the cart icon'].join('\n'),
+      );
+      expect(error.message).toContain('does not say what kind of step it is');
+      expect(error.hint).toContain('step_description');
+    });
+
+    it('rejects a described step with an unknown type', async () => {
+      const error = await expectFlowError(
+        ['name: f', 'steps:', '  - label: a', '    type: assert', '    step_description: b'].join(
+          '\n',
+        ),
+      );
+      expect(error.message).toContain('unsupported `type: assert`');
+      expect(error.hint).toContain('validation');
+    });
+
+    it('rejects a step whose only text is its own label', async () => {
+      const error = await expectFlowError(
+        ['name: f', 'steps:', '  - label: Assert the order was placed', '    type: validation'].join(
+          '\n',
+        ),
+      );
+      expect(error.message).toContain('no `step_description`');
+      expect(error.hint).toContain('fall back to the label');
+    });
+
+    it('rejects a manual step that does not say which action to take', async () => {
+      const error = await expectFlowError(
+        ['name: f', 'steps:', '  - label: a', '    type: manual', '    target: b'].join('\n'),
+      );
+      expect(error.message).toContain('does not say which action to take');
+    });
+
+    it('rejects an unsupported manual action and lists the real ones', async () => {
+      const error = await expectFlowError(
+        ['name: f', 'steps:', '  - label: a', '    type: manual', '    step_type: pinch'].join(
+          '\n',
+        ),
+      );
+      expect(error.message).toContain('unsupported `step_type: pinch`');
+      expect(error.hint).toContain('swipe');
+    });
+
+    it('accepts every shape the runner does', () => {
+      const flow = parseFlow(
+        [
+          'name: f',
+          'steps:',
+          '  - label: a',
+          '    type: validation',
+          '    step_description: the home screen is showing',
+          '  - label: b',
+          '    type: instructions',
+          '    step_description: tap the cart icon',
+          '  - label: c',
+          '    type: extraction',
+          '    step_description: the order total',
+          '  - label: d',
+          '    type: manual',
+          '    step_type: tap',
+          '    target: cart.icon',
+        ].join('\n'),
+        'f.yaml',
+      );
+      expect(flow.steps).toHaveLength(4);
+    });
   });
 
   it('rejects a step that has a label but no action', async () => {

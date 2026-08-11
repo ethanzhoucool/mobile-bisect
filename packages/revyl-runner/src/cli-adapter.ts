@@ -8,7 +8,7 @@
  * the published docs, which document flags only and no output schemas.
  */
 
-import type { FlowStep } from '@mobile-bisect/core';
+import { MANUAL_STEP_TYPES as SHARED_MANUAL_STEP_TYPES, type FlowStep } from '@mobile-bisect/core';
 import type { CliResult } from './exec.js';
 import { UnsupportedStepError } from './errors.js';
 
@@ -191,24 +191,11 @@ export function runTraceArgs(taskId: string, output?: string): string[] {
 // Flow step -> argv
 // ---------------------------------------------------------------------------
 
-/** Low-level device verbs a flow may drive directly, keyed by `step_type`. */
-const MANUAL_STEP_TYPES = new Set([
-  'wait',
-  'navigate',
-  'kill_app',
-  'go_home',
-  'open_app',
-  'tap',
-  'double_tap',
-  'long_press',
-  'type',
-  'swipe',
-  'clear_text',
-  'back',
-  'key',
-  'shake',
-  'set_location',
-]);
+/**
+ * Low-level device verbs a flow may drive directly, keyed by `step_type`.
+ * Shared with the flow loader so a step accepted at load time is one this can run.
+ */
+const MANUAL_STEP_TYPES = new Set<string>(SHARED_MANUAL_STEP_TYPES);
 
 function str(v: unknown): string | undefined {
   return typeof v === 'string' && v.length > 0 ? v : undefined;

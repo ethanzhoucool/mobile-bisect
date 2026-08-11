@@ -2,7 +2,11 @@
 #
 # `label` is ours: it is the human line rendered under the phone in the report
 # and in the terminal. Everything else in a step is the Revyl-native body and is
-# passed through untouched, so you can use anything the runner understands.
+# passed to the runner untouched, so you can use anything it understands.
+#
+# `type` says which kind of step it is and `step_description` is the text the
+# device acts on, or the claim it checks. A step body the runner cannot execute
+# is rejected when this file loads rather than being run as something else.
 
 name: checkout-flow
 appId: com.orbit.store
@@ -12,26 +16,29 @@ expect: the order confirmation screen appears
 
 steps:
   - label: Launch Orbit Store
-    launch:
-      resetState: true
+    type: validation
+    step_description: the Orbit Store home screen is showing, with a list of products
 
   - label: Open featured product
-    tap: the first product card on the home screen
+    type: instructions
+    step_description: tap the first product card on the home screen
 
   - label: Tap "Add to cart"
-    tap: the "Add to cart" button on the product page
+    type: instructions
+    step_description: tap the "Add to cart" button on the product page
 
   - label: Open cart
-    tap: the cart icon in the header
+    type: instructions
+    step_description: tap the cart icon in the header
 
   - label: Apply coupon SAVE10
-    type:
-      target: the coupon code field
-      text: SAVE10
-      submit: true
+    type: instructions
+    step_description: type SAVE10 into the coupon code field and submit it
 
   - label: Tap "Place order"
-    tap: the "Place order" button
+    type: instructions
+    step_description: tap the "Place order" button
 
   - label: Assert order confirmation
-    assert: the "Order confirmed" heading is visible
+    type: validation
+    step_description: the "Order confirmed" heading is visible

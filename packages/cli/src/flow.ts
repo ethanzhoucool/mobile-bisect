@@ -5,12 +5,19 @@
  * and each step's `label`, and every other key inside a step is passed to the
  * runner untouched. That keeps the file readable in the report ("Tap Place
  * order") without mobile-bisect having an opinion about Revyl's step vocabulary.
+ *
+ * Thin is not the same as unchecked. The body still has to be one the runner
+ * can execute, because the alternative is worse than a rejected file: an
+ * unrecognised step used to run anyway, as an agent instruction whose text was
+ * the step's own label, and the search then blamed a commit for whatever that
+ * did. Failing here costs a corrected flow file; failing later costs trust in
+ * the answer.
  */
 
 import { access, readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { LineCounter, isMap, isSeq, parseDocument, type Node, type Pair } from 'yaml';
-import type { FlowDefinition, FlowStep } from '@mobile-bisect/core';
+import { checkStepShape, type FlowDefinition, type FlowStep } from '@mobile-bisect/core';
 import { CliError } from './errors.js';
 
 const ROOT_KEYS = ['name', 'appId', 'expect', 'steps', 'description'];
@@ -153,9 +160,14 @@ export function parseFlow(source: string, filePath: string): FlowDefinition {
       fail(
         `step ${i + 1} ("${label}") has a label but no action.`,
         node,
-        'Add the Revyl step body next to the label, e.g. `tap: "Place order"`.',
+        'Add the Revyl step body next to the label, e.g. `type: instructions` / ' +
+          '`step_description: tap "Place order"`.',
       );
     }
+
+    const problem = checkStepShape(body, label!);
+    if (problem) fail(`step ${i + 1}: ${problem.message}`, node, problem.hint);
+
     return { label, ...body };
   });
 

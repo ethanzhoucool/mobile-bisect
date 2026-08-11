@@ -7,3 +7,4 @@ export * from './fake-adapter.js';
 export * from './retry.js';
 export * from './diagnose.js';
 export * from './redact.js';
+export * from './step-shape.js';

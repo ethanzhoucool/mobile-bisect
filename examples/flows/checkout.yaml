@@ -5,10 +5,10 @@
 # app's real testIDs. `examples/orbit-store/checkout.flow.yaml` mirrors it.
 #
 # Shape follows docs/revyl-adapter.md: each step is a label plus one Revyl-native
-# body, passed through to the runner untouched. `instruction` maps to
-# `revyl device instruction`, `tap` / `type` to the low-level verbs, and the
-# top-level `expect` is the single `revyl device validation` that decides the
-# verdict.
+# body, passed through to the runner untouched. `type: instructions` maps to
+# `revyl device instruction`, `type: validation` to `revyl device validation`,
+# and `type: manual` to a low-level verb such as tap or type. The top-level
+# `expect` is the single validation that decides the verdict.
 #
 # Passes on index 40 (`Preserve checkout navigation`).
 # Fails on index 41 (`Refactor order response handling`) — POST /orders still
@@ -20,44 +20,33 @@ expect: the order confirmation screen appears
 
 steps:
   - label: Launch Orbit Store
-    validation: the Orbit Store home screen is showing a featured product card
+    type: validation
+    step_description: the Orbit Store home screen is showing a featured product card
 
   - label: Open featured product
-    tap:
-      target: featured-product
-    instruction: tap the large featured product card at the top of the home screen
+    type: instructions
+    step_description: tap the large featured product card at the top of the home screen
 
   - label: Tap "Add to cart"
-    tap:
-      target: add-to-cart
-    instruction: tap the blue "Add to cart" button in the bottom bar
+    type: instructions
+    step_description: tap the blue "Add to cart" button in the bottom bar
 
   - label: Open cart
-    tap:
-      target: cart-button
-    instruction: tap the bag icon in the top right corner
-    validation: the cart lists Aurora Wireless Headphones with a $249.00 subtotal
+    type: instructions
+    step_description: tap the bag icon in the top right corner
 
   # Two taps and a text entry in one step, so the labels stay aligned with the
   # CLI fixture, which models this flow as exactly seven steps.
   - label: Apply coupon SAVE10
-    instruction: >-
+    type: instructions
+    step_description: >-
       Tap "Checkout" in the bottom bar, then type SAVE10 into the promo code
       field and tap "Apply".
-    actions:
-      - tap:
-          target: checkout-button
-      - type:
-          target: coupon-input
-          text: SAVE10
-      - tap:
-          target: coupon-apply
-    validation: a green "SAVE10 applied" chip is showing and the total is $243.71
 
   - label: Tap "Place order"
-    tap:
-      target: place-order-button
-    instruction: tap the blue "Place order" button in the bottom bar
+    type: instructions
+    step_description: tap the blue "Place order" button in the bottom bar
 
   - label: Assert order confirmation
-    validation: the heading "Order confirmed" is visible with an order number below it
+    type: validation
+    step_description: the heading "Order confirmed" is visible with an order number below it
