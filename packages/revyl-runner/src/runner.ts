@@ -197,6 +197,19 @@ export class RevylRunner implements MobileRuntimeRunner {
     return parsed;
   }
 
+  /**
+   * Build versions this app already has.
+   *
+   * Used before the search starts, to find commits that can be tested by
+   * installing rather than compiling.
+   */
+  async listBuilds(): Promise<Array<{ buildId: string; version: string }>> {
+    const exec = await this.exec();
+    const res = await exec(cli.buildListArgs(this.opts.appId), { timeoutMs: 60_000 });
+    if (res.code !== 0) return [];
+    return cli.parseBuildList(res);
+  }
+
   async installOrLaunch(input: LaunchInput): Promise<void> {
     const exec = await this.exec();
     const state = await this.requireSession(exec, input.sessionId);

@@ -33,10 +33,17 @@ import {
   type Session,
 } from '@mobile-bisect/core';
 import * as git from '@mobile-bisect/git';
-import { loadReport, loadRunner } from './adapters.js';
+import { asBuildLister, loadReport, loadRunner } from './adapters.js';
 import type { FrameworkName, ResumeOptions, RunOptions } from './args.js';
 import { loadConfig, type MobileBisectConfig } from './config.js';
 import { createFakeAdapter, resolveAdapter } from './frameworks.js';
+import {
+  appIdFromRevylConfig,
+  buildChain,
+  narrowByBuilds,
+  narrowedRange,
+  resolveBuildCommits,
+} from './prebuilt.js';
 import { CliError, messageOf } from './errors.js';
 import { findFlowFile, loadFlow } from './flow.js';
 import { redactDeep } from './redact.js';
@@ -110,7 +117,15 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     });
   }
 
-  const commits = await enumerateCommits(repo, opts, config);
+  let commits = await enumerateCommits(repo, opts, config);
+
+  // Before anything is compiled, test the builds this app already has. It only
+  // pays off for adapters that compile, and it needs the range to survive into
+  // `meta`, so it runs ahead of the run store.
+  if (opts.prebuilt && !opts.dryRun) {
+    commits = await narrowByExistingBuilds({ repo, commits, flow, expect, opts, config });
+  }
+
   const meta = buildMeta({ opts, flow, flowPath, expect, commits, repo });
 
   const store = await RunStore.create(repo, meta.runId);
@@ -157,6 +172,116 @@ export async function runCommand(opts: RunOptions): Promise<number> {
 }
 
 /**
+ * Narrows the range using builds Revyl already has, before anything compiles.
+ *
+ * Every test here is an install rather than a compile, so the pass is close to
+ * free, and what it hands back is a smaller range for the real search. It is
+ * strictly an optimisation: any failure, any missing app id, any set of build
+ * labels that name no commits, and the full range goes through unchanged.
+ */
+async function narrowByExistingBuilds(input: {
+  repo: string;
+  commits: CommitSummary[];
+  flow: FlowDefinition;
+  expect: string;
+  opts: RunOptions;
+  config: MobileBisectConfig;
+}): Promise<CommitSummary[]> {
+  const { repo, commits, flow, expect, opts, config } = input;
+  const appId =
+    flow.appId ?? config.appId ?? (await appIdFromRevylConfig(repo, opts.platform));
+  const note = (line: string): void => {
+    process.stdout.write(`${pc.dim(line)}\n`);
+  };
+
+  let runner: MobileRuntimeRunner | undefined;
+  try {
+    const api = await loadRunner();
+    runner = api.createRevylRunner({
+      platform: opts.platform,
+      deviceModel: opts.deviceModel ?? config.deviceModel,
+      osVersion: opts.osVersion ?? config.osVersion,
+      ...(appId ? { appId } : {}),
+      projectRoot: repo,
+      timeoutMs: opts.timeoutMs,
+      flow,
+    });
+
+    const lister = asBuildLister(runner);
+    if (!lister) return commits;
+
+    if (!appId) {
+      note('  no app id, so existing builds cannot be listed; compiling every candidate');
+      note('  set `appId` in mobile-bisect.config.ts, or `build.app_id` in .revyl/config.yaml');
+      return commits;
+    }
+
+    const builds = await lister.listBuilds();
+    if (builds.length === 0) {
+      note('  this app has no builds yet, compiling every candidate');
+      return commits;
+    }
+
+    const prebuilt = await resolveBuildCommits(repo, builds, commits);
+    const chain = buildChain(commits, prebuilt);
+    if (!chain) {
+      note(`  no existing build names a commit in this range, compiling every candidate`);
+      return commits;
+    }
+
+    const interior = chain.length - 2;
+    note(
+      `  ${interior} of ${commits.length} commits already have a build; testing those first ` +
+        `(install, not compile)`,
+    );
+
+    const result = await narrowByBuilds({
+      chain,
+      onNote: (l) => note(l),
+      test: async (entry) => {
+        const session = await runner!.startSession({
+          platform: opts.platform,
+          deviceModel: opts.deviceModel ?? config.deviceModel,
+          osVersion: opts.osVersion ?? config.osVersion,
+        });
+        try {
+          note(`  ${entry.commit.shortSha}  installing build ${entry.version}`);
+          await runner!.installOrLaunch({
+            sessionId: session.sessionId,
+            buildId: entry.buildId,
+            resetState: true,
+          });
+          const run = await runner!.runFlow({
+            sessionId: session.sessionId,
+            flow,
+            assertion: expect,
+            timeoutMs: opts.timeoutMs,
+          });
+          const verdict = run.verdict === 'pass' ? 'good' : run.verdict === 'fail' ? 'bad' : 'skip';
+          note(`  ${entry.commit.shortSha}  ${verdict}`);
+          return verdict;
+        } finally {
+          await runner!.stopSession(session.sessionId).catch(() => {});
+        }
+      },
+    });
+
+    const narrowed = narrowedRange(commits, result.goodSha, result.badSha);
+    if (narrowed.length < commits.length) {
+      note(
+        `  builds narrowed ${commits.length} commits to ${narrowed.length} in ${result.tested} ` +
+          `install${result.tested === 1 ? '' : 's'}, with nothing compiled`,
+      );
+    }
+    return narrowed;
+  } catch (e) {
+    // An optimisation that fails is not a reason to abandon the search.
+    note(`  could not use existing builds (${messageOf(e)}), compiling every candidate`);
+    return commits;
+  }
+}
+
+/**
  * Chooses the adapter and lets it veto the range before a device is started.
  *
  * The precheck is where an adapter refuses work it cannot answer honestly -
@@ -197,7 +322,9 @@ async function buildAdapter(input: {
   ui.note(
     pc.dim(`  ${resolved.adapter.displayName}${resolved.detection.summary ? `, ${resolved.detection.summary}` : ''}`),
   );
-  if (resolved.adapter.candidateKind === 'binary') {
+  // Only worth warning about when something is actually going to be compiled.
+  // A range narrowed to its two boundaries has no interior left to test.
+  if (resolved.adapter.candidateKind === 'binary' && commits.length > 2) {
     ui.note(
       pc.dim(
         `  every candidate is compiled, so expect minutes per round rather than seconds ` +

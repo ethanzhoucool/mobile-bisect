@@ -430,6 +430,44 @@ export function inDirectory(dir: string, args: string[]): string[] {
   return ['-C', dir, ...args];
 }
 
+export function buildListArgs(appId?: string): string[] {
+  const args = ['build', 'list', '--json'];
+  if (appId) args.push('--app', appId);
+  return args;
+}
+
+export interface BuildVersion {
+  buildId: string;
+  /** The label the build was uploaded under, e.g. `main-3efb0b3` or `c801b0b`. */
+  version: string;
+  uploadedAt?: string;
+}
+
+/**
+ * Every build version an app already has.
+ *
+ * These are the free candidates: a build that exists installs in seconds,
+ * where compiling the same commit costs a minute or more. What they cannot
+ * tell us on their own is which commit each one came from; see
+ * `resolveBuildCommits` for that half.
+ */
+export function parseBuildList(res: CliResult): BuildVersion[] {
+  const json = rec(parseJson(res));
+  const list = json?.versions;
+  if (!Array.isArray(list)) return [];
+
+  const out: BuildVersion[] = [];
+  for (const item of list) {
+    const o = rec(item);
+    const buildId = o && (str(o.id) ?? str(o.build_version_id));
+    const version = o && str(o.version);
+    if (!buildId || !version) continue;
+    const uploadedAt = str(o.uploaded_at);
+    out.push({ buildId, version, ...(uploadedAt ? { uploadedAt } : {}) });
+  }
+  return out;
+}
+
 export interface UploadedBuildInfo {
   buildId: string;
   version?: string;

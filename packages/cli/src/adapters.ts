@@ -10,6 +10,16 @@
 
 import type { FlowDefinition, MobileRuntimeRunner } from '@mobile-bisect/core';
 
+/** What the build-first pass needs from a runner that has one. */
+export interface BuildLister {
+  listBuilds(): Promise<Array<{ buildId: string; version: string }>>;
+}
+
+export function asBuildLister(runner: MobileRuntimeRunner): BuildLister | undefined {
+  const maybe = runner as Partial<BuildLister>;
+  return typeof maybe.listBuilds === 'function' ? (maybe as BuildLister) : undefined;
+}
+
 export type ApiSource = 'package' | 'builtin';
 
 export interface ReportApi {

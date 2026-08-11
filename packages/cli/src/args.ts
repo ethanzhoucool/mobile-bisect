@@ -34,6 +34,8 @@ export interface RunOptions extends CommonOptions {
   variant?: string;
   /** Subdirectory holding the native project. Overrides `build.projectDir`. */
   projectDir?: string;
+  /** Test the app's existing Revyl builds before compiling anything. */
+  prebuilt: boolean;
   concurrency: number;
   maxCandidates: number;
   timeoutMs: number;
@@ -199,7 +201,7 @@ const KNOWN_FLAGS: Record<Command, string[]> = {
     'good', 'bad', 'flow', 'expect', 'device-model', 'os-version', 'platform', 'concurrency',
     'max-candidates', 'timeout', 'allow-dirty', 'dry-run', 'port', 'ui', 'json', 'open',
     'culprit', 'flaky', 'step-delay', 'cwd', 'help', 'color',
-    'framework', 'scheme', 'variant', 'project-dir',
+    'framework', 'scheme', 'variant', 'project-dir', 'prebuilt',
   ],
   resume: ['cwd', 'dry-run', 'port', 'ui', 'json', 'open', 'flow', 'help', 'color'],
   init: ['cwd', 'yes', 'force', 'flow', 'help', 'color'],
@@ -406,6 +408,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): ParsedArgs {
         scheme: str(flags, 'scheme'),
         variant: str(flags, 'variant'),
         projectDir: str(flags, 'project-dir'),
+        prebuilt: bool(flags, 'prebuilt', true),
         concurrency: int(flags, 'concurrency', 1, { min: 1, max: 8 }),
         maxCandidates: int(flags, 'max-candidates', 64, { min: 2, max: 4096 }),
         timeoutMs: int(flags, 'timeout', 600, { min: 5, max: 86_400 }) * 1000,
@@ -500,6 +503,7 @@ RUN OPTIONS
   --scheme <name>           Xcode scheme to build (xcode only)
   --variant <name>          Gradle variant to assemble (gradle only, default debug)
   --project-dir <dir>       Subdirectory holding the native project, e.g. ios
+  --no-prebuilt            Skip the pass that tests existing Revyl builds first
   --concurrency <n>         Candidates evaluated in parallel (default 1, max 8)
   --max-candidates <n>      Refuse to start beyond this many commits (default 64)
   --timeout <seconds>       Per-candidate flow timeout (default 600)
@@ -555,6 +559,7 @@ the command to resume.
   --scheme <name>           Xcode scheme to build (xcode only)
   --variant <name>          Gradle variant to assemble (gradle only, default debug)
   --project-dir <dir>       Subdirectory holding the native project, e.g. ios
+  --no-prebuilt            Skip the pass that tests existing Revyl builds first
   --concurrency <n>         Candidates evaluated in parallel (default 1, max 8)
   --max-candidates <n>      Refuse to start beyond this many commits (default 64)
   --timeout <seconds>       Per-candidate flow timeout (default 600)
