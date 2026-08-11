@@ -54,6 +54,8 @@ export interface BisectMeta {
   badRef: string;
   expect: string;
   totalCommits: number;
+  /** How many steps the flow has, known before the first candidate runs. */
+  flowSteps?: number;
   plannedRounds: number;
 }
 
@@ -70,6 +72,7 @@ export type BisectEvent =
     }
   | { type: 'commit.running'; at: string; sha: string; streamUrl?: string; sessionId?: string }
   | { type: 'flow.step'; at: string; sha: string; index: number; total: number; label: string }
+  | { type: 'flow.frame'; at: string; sha: string; ordinal: number; path: string }
   | { type: 'commit.completed'; at: string; result: CommitResult }
   | {
       type: 'range.narrowed';

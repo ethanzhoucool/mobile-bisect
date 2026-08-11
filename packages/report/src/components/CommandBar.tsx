@@ -54,7 +54,9 @@ export function CommandBar({ meta, round, remaining, done, live }: CommandBarPro
             </span>
             <i className="sep" />
             <span className="c-muted">
-              <Num value={remaining} className="c-text" /> of {meta.totalCommits} remain
+              {/* The range's first commit is the known-good base, never a suspect. */}
+              <Num value={remaining} className="c-text" /> of {Math.max(meta.totalCommits - 1, 0)}{' '}
+              remain
             </span>
           </>
         )}

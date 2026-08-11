@@ -1243,6 +1243,30 @@ body {
   border-color: rgba(53, 214, 154, 0.45);
 }
 
+/*
+ * Waiting, not failing. A round spends most of its time compiling the commit
+ * and booting a device, and a still dashed circle there looks the same as a
+ * capture that did not happen, so this one turns.
+ */
+.phone-empty-spin {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1.5px solid #232b36;
+  border-top-color: var(--blue, #6ea8fe);
+  animation: phone-empty-spin 900ms linear infinite;
+}
+@keyframes phone-empty-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-empty-spin {
+    animation-duration: 2400ms;
+  }
+}
+
 /* Empty evidence tab. Quiet by design: this is an absence, not an error. */
 .ev-empty {
   display: flex;
@@ -1301,4 +1325,20 @@ body {
   height: 100%;
   border: 0;
   background: #0d1116;
+
+  /*
+   * KNOWN ROUGH EDGE: Revyl's session page draws its own toolbar and its own
+   * phone bezel, so inside our bezel this reads as a phone within a phone.
+   *
+   * Cropping to the device screen from out here was tried and does not hold up.
+   * The embed is cross-origin, so its layout cannot be measured, and Revyl's
+   * viewer positions the device on a canvas that moves with the iframe size, so
+   * any fixed inset is right at one width and shows blank canvas at another.
+   * Removing our bezel instead leaves a dark device screen with nothing to
+   * separate it from a dark page.
+   *
+   * The real fixes are upstream: a chrome-less embed URL, or rendering the
+   * per-step frames live instead of embedding at all. Until then a visible
+   * nested frame beats a confidently cropped blank rectangle.
+   */
 }

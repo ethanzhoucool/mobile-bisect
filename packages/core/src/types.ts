@@ -137,6 +137,15 @@ export interface RunFlowInput {
   assertion: string;
   /** Emitted per step so the report can render progress live. */
   onStep?: (index: number, label: string) => void;
+  /**
+   * Emitted after a step, with the screen it left behind, run-dir-relative.
+   *
+   * Steps announce themselves before they run, so `onStep` has nothing to show
+   * yet. This fires once the device has answered and is what lets the report
+   * put the candidate's actual screen on the phone while it is still running,
+   * rather than waiting for the whole candidate to finish.
+   */
+  onFrame?: (ordinal: number, path: string) => void;
   timeoutMs?: number;
 }
 
@@ -178,6 +187,11 @@ export interface BisectMeta {
   totalCommits: number;
   /** ceil(log2(n)), the round count shown in the command bar. */
   plannedRounds: number;
+  /**
+   * How many steps the flow has. Known before the first candidate runs, which
+   * is the only way the phone can say "0 / 4" rather than guessing.
+   */
+  flowSteps?: number;
 }
 
 /**
@@ -191,6 +205,7 @@ export type BisectEvent =
   | { type: 'round.started'; at: string; round: number; activeRange: ActiveRange; candidateSha: string }
   | { type: 'commit.running'; at: string; sha: string; streamUrl?: string; sessionId?: string }
   | { type: 'flow.step'; at: string; sha: string; index: number; total: number; label: string }
+  | { type: 'flow.frame'; at: string; sha: string; ordinal: number; path: string }
   | { type: 'commit.completed'; at: string; result: CommitResult }
   | { type: 'range.narrowed'; at: string; round: number; activeRange: ActiveRange; remaining: number }
   | { type: 'culprit.found'; at: string; goodSha: string; badSha: string; diagnosis?: string }

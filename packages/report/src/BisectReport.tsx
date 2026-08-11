@@ -234,11 +234,17 @@ export function BisectReport({
    * a real frame, a missing one is a gap and gets said so.
    */
   const noCaptures = useMemo(() => {
+    // Frames arriving right now are proof enough that this run captures.
+    if (state.liveFrames.size) return false;
+    // No results yet is a run that has not finished a candidate, not a fixture.
+    // Treating it as one drew the illustrated store on every real run for the
+    // minute or so before the first candidate reported.
+    if (state.results.size === 0) return false;
     for (const r of state.results.values()) {
       if (r.localPaths?.length || r.screenshots?.length) return false;
     }
     return true;
-  }, [state.results]);
+  }, [state.results, state.liveFrames]);
 
   const evidence = useMemo(
     () => evidenceFor({ bad: badResult, good: goodResult, synthetic: noCaptures }),

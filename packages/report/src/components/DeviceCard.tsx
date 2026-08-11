@@ -99,6 +99,7 @@ export function PhoneScreen({
   assert,
   diff,
   liveUrl,
+  pending,
 }: {
   videoUrl?: string;
   /** Ordered per-step captures; the primary playback path. */
@@ -111,6 +112,8 @@ export function PhoneScreen({
   diff?: boolean;
   /** Revyl session viewer, embedded while this candidate is actually running. */
   liveUrl?: string;
+  /** Why there is nothing to show yet, when that is simply "not yet". */
+  pending?: 'building' | 'starting';
 }) {
   const synthetic = useSynthetic();
   const src = useMedia(videoUrl);
@@ -170,7 +173,24 @@ export function PhoneScreen({
   // is a different app than the one under test, rendering it for a real run
   // would put a screen on the phone that the run never produced.
   if (synthetic) return <OrbitStore screen={screen} assert={assert} diff={diff} />;
+  // Most of a round is spent compiling the commit and booting a device, and
+  // during that there is no screen because nothing has run yet. Saying "no
+  // frame captured" there reads as a failed capture, which is a different and
+  // much worse thing than "not yet".
+  if (pending) return <Pending kind={pending} />;
   return <NoCapture assert={assert} />;
+}
+
+/** The phone before the candidate has produced anything: what it is waiting on. */
+export function Pending({ kind }: { kind: 'building' | 'starting' }) {
+  return (
+    <div className="phone-empty" data-pending={kind}>
+      <span className="phone-empty-spin" aria-hidden="true" />
+      <span className="micro">
+        {kind === 'building' ? 'building this commit' : 'starting the device'}
+      </span>
+    </div>
+  );
 }
 
 /**
@@ -256,6 +276,9 @@ export function DeviceCard({
   const idx = done ? total : (step?.index ?? 0);
   const screen = screenForStep(done ? total : (step?.index ?? 0), verdict);
   const glow = state === 'running' ? 'blue' : state === 'good' ? 'green' : state === 'bad' ? 'red' : 'none';
+  // `scheduled` is the adapter compiling the candidate; `running` is a device
+  // that has started but not yet answered a step.
+  const pending = done ? undefined : state === 'scheduled' ? 'building' : state === 'running' ? 'starting' : undefined;
 
   return (
     <div
@@ -286,6 +309,7 @@ export function DeviceCard({
             totalSteps={total}
             screen={screen}
             assert={done ? (verdict ?? null) : null}
+            {...(pending ? { pending } : {})}
           />
         </PhoneFrame>
       </div>

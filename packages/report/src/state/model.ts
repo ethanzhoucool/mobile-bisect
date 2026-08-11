@@ -37,6 +37,14 @@ export interface ViewState {
   results: Map<string, CommitResult>;
   /** Steps seen so far for each commit, in order. */
   steps: Map<string, FlowStepMark[]>;
+  /**
+   * Frames captured for each commit while it is still running, in step order.
+   *
+   * A commit's `result` carries its frames once it finishes, but the phone
+   * needs something to show before that, and the only other candidate is an
+   * embedded device viewer that arrives with its own chrome.
+   */
+  liveFrames: Map<string, string[]>;
   round: number;
   activeRange: ActiveRange;
   candidateSha?: string;
@@ -60,6 +68,7 @@ export function emptyState(): ViewState {
     states: [],
     results: new Map(),
     steps: new Map(),
+    liveFrames: new Map(),
     round: 0,
     activeRange: EMPTY_RANGE,
     completed: [],
@@ -103,6 +112,12 @@ export function applyEvent(s: ViewState, ev: BisectEvent, at: number): void {
       if (!list.some((m) => m.index === mark.index)) list.push(mark);
       s.steps.set(ev.sha, list);
       if (s.running?.sha === ev.sha) s.running = { ...s.running, step: mark };
+      break;
+    }
+    case 'flow.frame': {
+      const list = s.liveFrames.get(ev.sha) ?? [];
+      if (!list.includes(ev.path)) list.push(ev.path);
+      s.liveFrames.set(ev.sha, list);
       break;
     }
     case 'commit.completed': {

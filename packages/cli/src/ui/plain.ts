@@ -39,7 +39,10 @@ export class PlainSink implements EventSink {
         this.line(
           e.at,
           'search',
-          `${e.meta.totalCommits} commits from ${e.meta.goodRef} to ${e.meta.badRef} · flow ${e.meta.flowName} · ${e.meta.plannedRounds} rounds planned`,
+          // `totalCommits` spans the range, whose first commit is the one already
+          // known to be good. Counting it as a suspect overstates the search by
+          // one against what `git log good..bad` shows.
+          `${plural(Math.max(e.meta.totalCommits - 1, 0), 'commit')} from ${e.meta.goodRef} to ${e.meta.badRef} · flow ${e.meta.flowName} · ${plural(e.meta.plannedRounds, 'round')} planned`,
         );
         this.line(e.at, 'expect', `"${e.meta.expect}"`);
         break;
@@ -107,6 +110,11 @@ export class JsonSink implements EventSink {
   handle(e: BisectEvent): void {
     this.write(`${JSON.stringify(e)}\n`);
   }
+}
+
+/** "1 commit" / "9 commits". A search that narrows to one should not say "1 commits". */
+function plural(n: number, noun: string): string {
+  return `${n} ${noun}${n === 1 ? '' : 's'}`;
 }
 
 function short(sha: string): string {

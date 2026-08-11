@@ -27,7 +27,9 @@ function stepTotal(state: ViewState): number | undefined {
     const total = marks[marks.length - 1]?.total;
     if (total) return total;
   }
-  return undefined;
+  // Before the first step reports in, the flow's own length is the only honest
+  // answer; without it the phone falls back to the demo fixture's seven.
+  return state.meta?.flowSteps;
 }
 
 function framesOf(result?: { localPaths?: string[]; screenshots?: string[] }): string[] | undefined {
@@ -66,11 +68,19 @@ export function DeviceStage({ state, height, parallel, live, framesBySha }: Devi
         /* Verdict and step come from the playhead; the frames may come from
            the eventual result, since a running candidate has not reported one
            yet and `frameIndexFor` only ever shows the step being replayed. */
-        frames={framesOf(candidateResult ?? framesBySha?.get(candidateSha ?? ''))}
-        /* Only the candidate that is running right now, and only before it has
-           a verdict: once classified, its captured frames are the evidence and
-           the session is on its way out. */
-        liveUrl={live && !candidateResult ? state.running?.streamUrl : undefined}
+        frames={
+          framesOf(candidateResult ?? framesBySha?.get(candidateSha ?? '')) ??
+          state.liveFrames.get(candidateSha ?? '')
+        }
+        /* Only the candidate that is running right now, only before it has a
+           verdict, and only until its own screens start arriving: a frame the
+           run actually captured beats an embedded viewer that brings its own
+           toolbar and phone bezel into the middle of ours. */
+        liveUrl={
+          live && !candidateResult && !state.liveFrames.get(candidateSha ?? '')?.length
+            ? state.running?.streamUrl
+            : undefined
+        }
         phoneWidth={phoneWidth}
         width={cardWidth}
         anchor={st === 'bad' ? 'bad-phone' : undefined}
