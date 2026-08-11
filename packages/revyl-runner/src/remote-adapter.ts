@@ -62,8 +62,8 @@ export class RevylRemoteAdapter implements FrameworkAdapter {
 
   private readonly opts: RevylRemoteAdapterOptions;
   private executorPromise?: Promise<CliExecutor>;
-  /** sha -> build id, so a retry within a run does not rebuild. */
-  private readonly built = new Map<string, string>();
+  /** sha -> what the build produced, so a retry within a run does not rebuild. */
+  private readonly built = new Map<string, { buildId: string; bundleId?: string }>();
 
   constructor(opts: RevylRemoteAdapterOptions) {
     if (!opts?.projectRoot) throw new Error('RevylRemoteAdapter requires a projectRoot');
@@ -113,8 +113,11 @@ export class RevylRemoteAdapter implements FrameworkAdapter {
   async prepare(sha: string, worktreePath: string, ctx: PrepareContext): Promise<PreparedCandidate> {
     const cached = this.built.get(sha);
     if (cached) {
-      ctx.onLog?.(`[${short(sha)}] reusing build ${cached}`);
-      return this.candidate(sha, worktreePath, ctx.platform, cached, { cached: true });
+      ctx.onLog?.(`[${short(sha)}] reusing build ${cached.buildId}`);
+      return this.candidate(sha, worktreePath, ctx.platform, cached.buildId, {
+        cached: true,
+        ...(cached.bundleId ? { bundleId: cached.bundleId } : {}),
+      });
     }
 
     const started = Date.now();
@@ -152,10 +155,16 @@ export class RevylRemoteAdapter implements FrameworkAdapter {
         );
       }
 
-      this.built.set(sha, parsed.buildId);
+      // The bundle id is what launches the app. Installing a build does not
+      // necessarily foreground it, and a flow that runs against the springboard
+      // fails its assertion for a reason that has nothing to do with the commit.
+      this.built.set(sha, { buildId: parsed.buildId, ...(parsed.bundleId ? { bundleId: parsed.bundleId } : {}) });
       const ms = Date.now() - started;
       ctx.onLog?.(`[${short(sha)}] built in ${Math.round(ms / 1000)}s -> ${parsed.buildId}`);
-      return this.candidate(sha, worktreePath, ctx.platform, parsed.buildId, { durationMs: ms });
+      return this.candidate(sha, worktreePath, ctx.platform, parsed.buildId, {
+        durationMs: ms,
+        ...(parsed.bundleId ? { bundleId: parsed.bundleId } : {}),
+      });
     } finally {
       // The seeded config is ours, not the commit's. Leaving it behind would
       // make the worktree diff lie about what the candidate contained.
@@ -194,7 +203,7 @@ export class RevylRemoteAdapter implements FrameworkAdapter {
     worktreePath: string,
     platform: Platform,
     buildId: string,
-    extra: { cached?: boolean; durationMs?: number },
+    extra: { cached?: boolean; durationMs?: number; bundleId?: string },
   ): PreparedCandidate {
     return {
       kind: 'binary',

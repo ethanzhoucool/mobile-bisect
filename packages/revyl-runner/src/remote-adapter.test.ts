@@ -248,3 +248,29 @@ async function exists(p: string): Promise<boolean> {
     return false;
   }
 }
+
+describe('launching what it built', () => {
+  it('carries the bundle id, since installing a build does not foreground it', async () => {
+    const { executor } = fakeCli();
+    const candidate = await new RevylRemoteAdapter({ projectRoot: repo, executor }).prepare(
+      SHA,
+      worktree,
+      { platform: 'ios' },
+    );
+
+    // Without this the app is installed and the flow runs against the
+    // springboard, failing for a reason unrelated to the commit.
+    expect(candidate.bundleId).toBe('com.revyl.vault');
+  });
+
+  it('keeps the bundle id when the build is reused', async () => {
+    const { executor } = fakeCli();
+    const adapter = new RevylRemoteAdapter({ projectRoot: repo, executor });
+
+    await adapter.prepare(SHA, worktree, { platform: 'ios' });
+    const again = await adapter.prepare(SHA, worktree, { platform: 'ios' });
+
+    expect(again.cached).toBe(true);
+    expect(again.bundleId).toBe('com.revyl.vault');
+  });
+});
