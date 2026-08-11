@@ -1,4 +1,5 @@
 import { boundaryFor, recentResults, type ViewState } from '../state/model.ts';
+import type { CommitResult } from '../types.ts';
 import { clamp } from '../lib/util.ts';
 import { DeviceCard } from './DeviceCard.tsx';
 
@@ -12,22 +13,36 @@ export interface DeviceStageProps {
   parallel: number;
   /** Live run: the running candidate may embed its device session. */
   live?: boolean;
+  /** Every result in the stream, so a mid-round candidate can still replay. */
+  framesBySha?: Map<string, CommitResult>;
 }
 
 /**
  * Local copies before presigned URLs: they never expire, and their filenames
  * carry the step number the playhead uses to pick a frame.
  */
+/** The flow's step count, from whichever candidate first reported it. */
+function stepTotal(state: ViewState): number | undefined {
+  for (const marks of state.steps.values()) {
+    const total = marks[marks.length - 1]?.total;
+    if (total) return total;
+  }
+  return undefined;
+}
+
 function framesOf(result?: { localPaths?: string[]; screenshots?: string[] }): string[] | undefined {
   return result?.localPaths?.length ? result.localPaths : result?.screenshots;
 }
 
-export function DeviceStage({ state, height, parallel, live }: DeviceStageProps) {
+export function DeviceStage({ state, height, parallel, live, framesBySha }: DeviceStageProps) {
   const candidateSha = state.running?.sha ?? state.candidateSha;
   const candidate = candidateSha ? state.commits[state.indexOf.get(candidateSha) ?? -1] : undefined;
   const candidateResult = candidateSha ? state.results.get(candidateSha) : undefined;
   const steps = candidateSha ? state.steps.get(candidateSha) : undefined;
   const step = state.running?.step ?? steps?.[steps.length - 1];
+  // Before the first `flow.step` there is no mark to read the length off, so
+  // borrow it from any candidate that has already reported one.
+  const flowSteps = stepTotal(state);
 
   const cards: React.ReactNode[] = [];
   const count = parallel > 1 ? parallel : candidateSha && state.completed.length ? 2 : 1;
@@ -45,9 +60,13 @@ export function DeviceStage({ state, height, parallel, live }: DeviceStageProps)
         subject={candidate.subject}
         state={st}
         step={step}
+        flowSteps={flowSteps}
         reason={candidateResult?.reason}
         videoUrl={candidateResult?.videoUrl}
-        frames={framesOf(candidateResult)}
+        /* Verdict and step come from the playhead; the frames may come from
+           the eventual result, since a running candidate has not reported one
+           yet and `frameIndexFor` only ever shows the step being replayed. */
+        frames={framesOf(candidateResult ?? framesBySha?.get(candidateSha ?? ''))}
         /* Only the candidate that is running right now, and only before it has
            a verdict: once classified, its captured frames are the evidence and
            the session is on its way out. */
@@ -87,6 +106,7 @@ export function DeviceStage({ state, height, parallel, live }: DeviceStageProps)
         subject={c.subject}
         state={r.state}
         step={lastStep}
+        flowSteps={flowSteps}
         reason={r.reason}
         videoUrl={r.videoUrl}
         frames={framesOf(r)}

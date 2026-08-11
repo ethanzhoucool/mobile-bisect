@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { BisectEvent } from './types.ts';
+import type { CommitResult, BisectEvent } from './types.ts';
 import { remainingCount } from './state/model.ts';
 import { buildTimeline, sceneAt, stateAt, REVEAL_MS } from './state/timeline.ts';
 import { evidenceFor } from './state/evidence.ts';
@@ -214,6 +214,21 @@ export function BisectReport({
   // Declared after noCaptures so the drawer knows whether it may draw the fixture.
 
   /**
+   * Every result in the stream, regardless of where the playhead is.
+   *
+   * A candidate that is mid-round has not emitted `commit.completed` yet, so
+   * the time-sliced state has no frames for it and the phone would sit empty
+   * for the whole round. The frames it eventually produced are the frames it
+   * was producing at the time, and they are indexed by the step being replayed,
+   * so nothing is shown before the step that captured it.
+   */
+  const framesBySha = useMemo(() => {
+    const out = new Map<string, CommitResult>();
+    for (const e of events) if (e.type === 'commit.completed') out.set(e.result.sha, e.result);
+    return out;
+  }, [events]);
+
+  /**
    * A report with no captured frame anywhere is the fixture or a dry run, and
    * the illustrated store is the intended stand-in. Once any run has captured
    * a real frame, a missing one is a gap and gets said so.
@@ -310,7 +325,13 @@ export function BisectReport({
                 }}
               />
             ) : (
-              <DeviceStage state={state} height={stageH} parallel={parallelCount} live={live} />
+              <DeviceStage
+                state={state}
+                height={stageH}
+                parallel={parallelCount}
+                live={live}
+                framesBySha={framesBySha}
+              />
             )}
           </main>
 

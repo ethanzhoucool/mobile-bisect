@@ -220,6 +220,8 @@ export interface DeviceCardProps {
   subject: string;
   state: CommitState;
   step?: { index: number; total: number; label: string };
+  /** The flow's length, for before the first step mark arrives. */
+  flowSteps?: number;
   reason?: string;
   videoUrl?: string;
   frames?: string[];
@@ -238,6 +240,7 @@ export function DeviceCard({
   subject,
   state,
   step,
+  flowSteps,
   reason,
   videoUrl,
   frames,
@@ -249,9 +252,9 @@ export function DeviceCard({
 }: DeviceCardProps) {
   const done = state === 'good' || state === 'bad' || state === 'skipped' || state === 'inconclusive';
   const verdict = state === 'good' ? 'pass' : state === 'bad' ? 'fail' : undefined;
-  const total = step?.total ?? 7;
+  const total = step?.total ?? flowSteps ?? 7;
   const idx = done ? total : (step?.index ?? 0);
-  const screen = screenForStep(done ? 7 : (step?.index ?? 0), verdict);
+  const screen = screenForStep(done ? total : (step?.index ?? 0), verdict);
   const glow = state === 'running' ? 'blue' : state === 'good' ? 'green' : state === 'bad' ? 'red' : 'none';
 
   return (
