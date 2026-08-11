@@ -1,7 +1,7 @@
 /**
  * The Xcode adapter: Swift and Objective-C apps, built per candidate.
  *
- * This is the honest, slow path. There is no equivalent of the JS swap here —
+ * This is the honest, slow path. There is no equivalent of the JS swap here -
  * a Swift change *is* a native change, so every candidate is a real compile.
  * Three things keep that bearable:
  *
@@ -102,7 +102,7 @@ export class XcodeAdapter implements FrameworkAdapter {
         confidence: 0.2,
         platforms: [],
         reason:
-          'only a Package.swift was found. A Swift package has no app target to install — point --project-dir at the app that consumes it.',
+          'only a Package.swift was found. A Swift package has no app target to install, point --project-dir at the app that consumes it.',
       };
     }
 

@@ -50,7 +50,7 @@ const GUARD = /(?:\bif\s*\(|\?\?|&&|\?\.|\breturn\s+null\b|\breturn;)/;
 /**
  * A renamed response-envelope key (`order:` -> `data:`) breaks every reader
  * downstream while the request itself still succeeds. PARSE only catches
- * property *access*, so the declaration side needs its own pattern — scoped to
+ * property *access*, so the declaration side needs its own pattern, scoped to
  * API-ish files, since a bare `data:` is far too common to trust anywhere else.
  */
 const ENVELOPE_KEY =

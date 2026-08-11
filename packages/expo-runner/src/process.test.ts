@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { ProcessGroupRegistry, killProcessGroup, spawnGroup } from './process.js';
 
-/** A child that itself spawns a grandchild — exactly what `npx expo start` does. */
+/** A child that itself spawns a grandchild, exactly what `npx expo start` does. */
 const PARENT_WITH_GRANDCHILD = `
 const { spawn } = require('child_process');
 const g = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1e9)'], { stdio: 'ignore' });

@@ -4,8 +4,8 @@ import { readEvents, resolveRun } from './loadEvents.js';
 import { inlineFrames } from './inlineAssets.js';
 import { renderHtml } from './template.js';
 /**
- * Writes a single self-contained report.html — CSS, JS, events and captured
- * frames all inlined — that opens from file:// with no network.
+ * Writes a single self-contained report.html, CSS, JS, events and captured
+ * frames all inlined, that opens from file:// with no network.
  */
 export async function renderReportDetailed(opts) {
     const { runDir, eventsPath } = await resolveRun(opts.runDir);
@@ -22,7 +22,7 @@ export async function renderReportDetailed(opts) {
         if (frames.failed.length) {
             const warn = opts.onWarn ?? ((m) => console.warn(m));
             warn(`mobile-bisect report: ${frames.failed.length} frame(s) could not be inlined ` +
-                `(first: ${frames.failed[0].url} — ${frames.failed[0].reason})`);
+                `(first: ${frames.failed[0].url}, ${frames.failed[0].reason})`);
         }
     }
     const html = await renderHtml({

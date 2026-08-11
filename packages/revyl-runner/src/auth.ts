@@ -1,5 +1,5 @@
 /**
- * Auth is never handled by this package — it is only *checked*.
+ * Auth is never handled by this package, it is only *checked*.
  *
  * We never take a key as an argument, never put one on a command line, and
  * never write one anywhere. The Revyl CLI reads `~/.revyl/credentials.json` or

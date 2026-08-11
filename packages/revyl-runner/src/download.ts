@@ -4,7 +4,7 @@
  * Revyl hands back presigned S3 URLs that expire (`X-Amz-Expires=3600` on the
  * frames we recorded). A bisect with retries can outlive that window, so
  * evidence is pulled to disk eagerly at collect time rather than lazily at
- * report time — by then the links are gone.
+ * report time, by then the links are gone.
  *
  * This module never throws. Artifact collection is evidence gathering and must
  * not be able to change a commit's verdict.

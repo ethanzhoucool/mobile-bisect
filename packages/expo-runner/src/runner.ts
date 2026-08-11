@@ -3,7 +3,7 @@
  *
  * A cloud iOS device is already running an Expo dev-client build. To test a
  * candidate commit we only have to make that commit's JavaScript reachable and
- * hand the device a URL — no `eas build` per commit, so a bisect round costs
+ * hand the device a URL, no `eas build` per commit, so a bisect round costs
  * seconds instead of ~20 minutes. `revyl-runner` consumes the `bundleUrl`.
  */
 
@@ -42,7 +42,7 @@ export interface ExpoCandidateRunnerOptions {
   cacheDir?: string;
   /**
    * Host baked into the URL handed to the device. Defaults to `127.0.0.1`,
-   * which a cloud device CANNOT reach on its own — `revyl-runner` supplies a
+   * which a cloud device CANNOT reach on its own, `revyl-runner` supplies a
    * relay/tunnel hostname here. Readiness is always probed on loopback.
    */
   host?: string;
@@ -145,7 +145,7 @@ export class ExpoCandidateRunner {
       const urls = buildBundleUrls({ appConfig, host: this.host, port });
       if (!urls.bundleUrl) {
         this.log(
-          `[${short(sha)}] no expo.scheme/expo.slug in app.json — handing back the raw packager URL`,
+          `[${short(sha)}] no expo.scheme/expo.slug in app.json, handing back the raw packager URL`,
         );
       }
 

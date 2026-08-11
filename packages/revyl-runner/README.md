@@ -4,11 +4,11 @@ The bridge between `mobile-bisect` and a cloud device.
 
 This package implements the `MobileRuntimeRunner` interface from
 `@mobile-bisect/core` by shelling out to the [Revyl](https://revyl.ai) CLI. It
-starts a cloud device, gets the candidate onto it — a deep link for a JavaScript
-bundle, an upload-and-install for a compiled binary — walks a flow, asks one
+starts a cloud device, gets the candidate onto it, a deep link for a JavaScript
+bundle, an upload-and-install for a compiled binary, walks a flow, asks one
 natural-language assertion, and returns `pass` / `fail` / `inconclusive`.
 
-Every fact about the Revyl CLI lives in exactly one file — `src/cli-adapter.ts`.
+Every fact about the Revyl CLI lives in exactly one file, `src/cli-adapter.ts`.
 `src/runner.ts` reads as plain orchestration. If the CLI changes shape, only the
 adapter and `fixtures/` move.
 
@@ -58,7 +58,7 @@ that the app answered the question and answered it wrong**. Everything else is
 | Assertion held | exit `0`, `success: true`, `step_output.validation_result: true` | `pass` |
 | Assertion did not hold | exit `1`, stderr `Error: validation failed`, `success: false`, `step_output.status: "success"`, `validation_result: false` | **`fail`** |
 | An action step could not be completed, but the assertion still answered | action step exits non-zero; the assertion is asked anyway | `pass` / `fail` per the assertion |
-| Assertion never ran (flow aborted on an infra error) | — | `inconclusive` |
+| Assertion never ran (flow aborted on an infra error) |, | `inconclusive` |
 | Device would not start | `device start` non-zero, e.g. `failed to start session` | `inconclusive` |
 | App would not install | `device install` non-zero, `Error: Installation failed` | `inconclusive` |
 | Candidate bundle would not load | the error-screen check answers `true` | `inconclusive` |
@@ -73,7 +73,7 @@ that the app answered the question and answered it wrong**. Everything else is
 
 The distinction that makes this work is two fields in one envelope:
 
-- `step_output.status` is the **worker's** health — did the step machinery run?
+- `step_output.status` is the **worker's** health, did the step machinery run?
 - `step_output.validation_result` is the **app's** answer.
 
 `status: "success"` with `validation_result: false` is a real failing assertion.
@@ -88,7 +88,7 @@ action step cannot complete, the runner stops issuing further actions (no point
 burning device minutes) and goes straight to the assertion, which is the only
 ground truth it trusts. If the assertion then answers `false`, that is a `fail`.
 If it cannot be evaluated, that is `inconclusive`. This is both honest and
-convergent — treating every missed tap as `inconclusive` would make the search
+convergent, treating every missed tap as `inconclusive` would make the search
 skip every commit after a real regression.
 
 **A bundle that will not load is never a `fail`.** After pointing the dev client
@@ -146,15 +146,15 @@ The runner **never takes, constructs, stores or logs a credential.**
 3. `checkRevylAuth()` runs `revyl auth status --json` once, up front, so a bisect
    fails in the first second rather than on commit 4.
 
-Every string that leaves this package — `onLog` output, thrown error messages,
-`RunResult.reason`, the persisted log snapshot — goes through `src/redact.ts`
+Every string that leaves this package, `onLog` output, thrown error messages,
+`RunResult.reason`, the persisted log snapshot, goes through `src/redact.ts`
 first. It scrubs `KEY=value` pairs with credential-shaped names, `Authorization`
 headers, secret query params, JWTs, vendor-prefixed keys (`rk_`, `rvl_`, `sk-`,
 `ghp_`, …), URL-embedded credentials, and blanket-replaces the live value of any
 `*KEY*`/`*TOKEN*`/`*SECRET*` env var.
 
 It deliberately leaves AWS SigV4 query params (`X-Amz-Credential`,
-`X-Amz-Signature`, `X-Amz-Security-Token`) alone — those are scoped, expiring
+`X-Amz-Signature`, `X-Amz-Security-Token`) alone, those are scoped, expiring
 read grants on the artifact URLs the report renders, and redacting them silently
 breaks every screenshot. There is a test that proves a real recorded report
 survives redaction with its URLs intact.
@@ -171,15 +171,15 @@ fail a candidate.
 | `screenshots` | Presigned S3 URLs from `device report --json` (`screenshot_before_url` / `screenshot_after_url` for every grounded action, in execution order). Falls back to locally-written frames when the report has none. |
 | `localPaths` | Run-dir-relative paths to the downloaded copies of those frames, plus per-step PNGs decoded from `step_output.image`, `network_requests.json.gz`, `perfetto_trace.perfetto-trace.gz`, `hardware_metrics.json.gz`, and `device_logs.json`. |
 | `networkUrl` | `device report --artifact network` (prints a presigned URL). |
-| `logsUrl` | Not set — see gaps below. |
-| `videoUrl` | Not set — see gaps below. |
+| `logsUrl` | Not set, see gaps below. |
+| `videoUrl` | Not set, see gaps below. |
 
 `screenshots` and `localPaths` are both populated: the remote URLs drive the
 live view during a run, the local copies are what the finished report renders.
 
 ### Screenshots are downloaded eagerly, not lazily
 
-Frame URLs are presigned and expire — the recorded report carries
+Frame URLs are presigned and expire, the recorded report carries
 `X-Amz-Expires=3600`. A six-round bisect with installs, flow replays and a retry
 routinely outlives that, so leaving URLs for the report to fetch later would
 mean the frames from the earliest rounds are already dead by the time the search
@@ -190,7 +190,7 @@ So `collectArtifacts` downloads every frame at collect time, while the links are
 live:
 
 - named `step-<NN>-action-<AA>-{before,after}.png`, which sorts lexicographically
-  into execution order — the sequence is recoverable from a directory listing;
+  into execution order, the sequence is recoverable from a directory listing;
 - through a bounded pool (`downloadConcurrency`, default 5) with a per-request
   timeout (`artifactTimeoutMs`, default 20s), so a hung fetch cannot wedge the
   search;
@@ -234,7 +234,7 @@ new RevylRunner({
   guarantees a cold JS start but not a wiped `AsyncStorage` / `UserDefaults`.
 - **`device tap --target` does not fail loudly.** A target that does not exist
   still returns `success: true` and taps a guessed coordinate. This is the main
-  reason the final assertion — not step exit codes — is the source of truth.
+  reason the final assertion, not step exit codes, is the source of truth.
 - **`device start` does not echo the device model or runtime.** The runner
   reports what it asked for; `device report` carries the authoritative values.
 
@@ -277,5 +277,5 @@ npx vitest run packages/revyl-runner
 
 No test touches the cloud. Everything under `fixtures/` was captured from a live
 Revyl CLI v0.1.71 session and then scrubbed of ids, emails and signatures, so
-the parsers are exercised against real output shapes — including the error paths
+the parsers are exercised against real output shapes, including the error paths
 where the CLI writes nothing to stdout and only a message to stderr.

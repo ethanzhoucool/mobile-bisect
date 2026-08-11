@@ -249,7 +249,16 @@ export function BisectReport({
     <MediaContext.Provider
       value={{ allowRemote: allowRemoteMedia, frames: frameData, synthetic: noCaptures }}
     >
-      <div className="fit" style={{ transform: `scale(${scale})` }}>
+      {/* The scaled canvas needs a layout box the size it actually renders at.
+          `transform` does not resize the box, so a 1440x900 element scaled to
+          0.8 still reserves 1440x900 and the page centres and clips against
+          the wrong rectangle. Sizing the wrapper to the scaled dimensions and
+          scaling from the top left keeps layout and pixels agreeing. */}
+      <div
+        className="fit"
+        style={{ width: DESIGN_W * scale, height: DESIGN_H * scale }}
+      >
+        <div className="fit-inner" style={{ transform: `scale(${scale})` }}>
         <div
           className="app"
           data-phase={scene.phase}
@@ -345,6 +354,7 @@ export function BisectReport({
               onFollow={() => setFollowing((f) => !f)}
             />
           )}
+        </div>
         </div>
       </div>
     </MediaContext.Provider>

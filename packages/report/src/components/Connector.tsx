@@ -78,7 +78,7 @@ export function Connector({
 
   if (!pts || !active) return null;
   const { a, b } = pts;
-  // The horizontal run must clear the card's label row — crossing it reads as a
+  // The horizontal run must clear the card's label row, crossing it reads as a
   // strikethrough on the commit subject, and this is the reveal frame.
   const midY = stopAtDrawer ? b.y - 20 : Math.min(a.y + (b.y - a.y) * 0.55, pts.keepOutY ?? Infinity);
   const d = `M ${a.x} ${a.y} L ${a.x} ${midY} L ${b.x} ${midY} L ${b.x} ${b.y}`;

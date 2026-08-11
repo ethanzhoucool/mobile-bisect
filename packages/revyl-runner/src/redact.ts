@@ -2,7 +2,7 @@
  * Credential scrubbing for everything this package emits.
  *
  * Deliberately narrow so it never mangles the presigned S3 artifact URLs the
- * report needs intact (`X-Amz-Signature`, `X-Amz-Credential`, …) — those are
+ * report needs intact (`X-Amz-Signature`, `X-Amz-Credential`, …), those are
  * short-lived, scoped read grants, not credentials worth hiding.
  */
 
@@ -29,7 +29,7 @@ const PATTERNS: Array<[RegExp, (...m: string[]) => string]> = [
     /\b(authorization\s*[:=]\s*"?)((?:bearer|token|basic)\s+)?([A-Za-z0-9._\-+/=]{8,})/gi,
     (_m, lead: string, scheme: string | undefined) => `${lead}${scheme ?? ''}${REDACTED}`,
   ],
-  // Secret-bearing query params only — AWS SigV4 params survive untouched.
+  // Secret-bearing query params only, AWS SigV4 params survive untouched.
   [
     new RegExp(`([?&](?:${SECRET_QUERY_KEYS})=)([^&\\s"'#]+)`, 'gi'),
     (_m, lead: string) => `${lead}${REDACTED}`,

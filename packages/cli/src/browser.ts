@@ -11,6 +11,6 @@ export function openInBrowser(target: string): void {
       shell: process.platform === 'win32',
     }).unref();
   } catch {
-    /* headless machine, no browser — the path is printed anyway */
+    /* headless machine, no browser, the path is printed anyway */
   }
 }

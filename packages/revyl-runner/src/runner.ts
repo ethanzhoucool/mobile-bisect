@@ -3,7 +3,7 @@
  *
  * Deliberately boring: every CLI fact lives in `cli-adapter.ts` and every
  * pass/fail/inconclusive judgement lives in `classify.ts`, so what remains here
- * is sequencing — start a device, point it at the candidate's JS, walk the
+ * is sequencing, start a device, point it at the candidate's JS, walk the
  * flow, ask the assertion, collect what the run produced.
  */
 
@@ -82,7 +82,7 @@ export interface RevylRunnerOptions {
 }
 
 const DEFAULT_BUNDLE_ERROR_ASSERTION =
-  'The screen is showing a fatal loading error — a red or white JavaScript error screen, ' +
+  'The screen is showing a fatal loading error, a red or white JavaScript error screen, ' +
   'a Metro bundler error, an "Unable to load script" message, or the Expo dev client ' +
   '"Something went wrong" screen';
 
@@ -345,7 +345,7 @@ export class RevylRunner implements MobileRuntimeRunner {
    * The screenshots are downloaded *eagerly*, not left as links for the report
    * to fetch later: they are presigned and expire (`X-Amz-Expires=3600` on the
    * frames we recorded), and a six-round bisect with retries can easily outlive
-   * that, which would leave the earliest rounds — often the interesting ones —
+   * that, which would leave the earliest rounds, often the interesting ones -
    * with dead evidence. Every failure here is logged and skipped.
    */
   async collectArtifacts(runId: string): Promise<Artifacts> {
@@ -470,7 +470,7 @@ export class RevylRunner implements MobileRuntimeRunner {
 
   /**
    * `revyl device …` targets sessions by *index*, and indices shift as sessions
-   * come and go — under `--concurrency 4` a stale index would drive the wrong
+   * come and go, under `--concurrency 4` a stale index would drive the wrong
    * device. Re-resolve from the session id before each phase.
    */
   private async requireSession(exec: CliExecutor, sessionId: string): Promise<SessionState> {
@@ -517,7 +517,7 @@ export class RevylRunner implements MobileRuntimeRunner {
     }
   }
 
-  /** `undefined` means "no artifactsDir configured" — stay URL-only, touch no disk. */
+  /** `undefined` means "no artifactsDir configured", stay URL-only, touch no disk. */
   private async artifactsDirFor(runId: string): Promise<string | undefined> {
     const base = this.opts.artifactsDir;
     if (!base) return undefined;

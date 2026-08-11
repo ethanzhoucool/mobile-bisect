@@ -81,7 +81,7 @@ export interface FlowDefinition {
 }
 
 // ---------------------------------------------------------------------------
-// Runtime interfaces — implemented by revyl-runner, faked in tests
+// Runtime interfaces, implemented by revyl-runner, faked in tests
 // ---------------------------------------------------------------------------
 
 export interface StartSessionInput {
@@ -165,7 +165,7 @@ export interface MobileRuntimeRunner {
 }
 
 // ---------------------------------------------------------------------------
-// Event stream — append-only, persisted to events.jsonl, consumed by report
+// Event stream, append-only, persisted to events.jsonl, consumed by report
 // ---------------------------------------------------------------------------
 
 export interface BisectMeta {
@@ -176,7 +176,7 @@ export interface BisectMeta {
   badRef: string;
   expect: string;
   totalCommits: number;
-  /** ceil(log2(n)) — the round count shown in the command bar. */
+  /** ceil(log2(n)), the round count shown in the command bar. */
   plannedRounds: number;
 }
 
@@ -200,7 +200,7 @@ export type BisectEvent =
 export type BisectEventType = BisectEvent['type'];
 
 // ---------------------------------------------------------------------------
-// Persisted run state (state.json) — enables `--resume`
+// Persisted run state (state.json), enables `--resume`
 // ---------------------------------------------------------------------------
 
 export interface BisectState {

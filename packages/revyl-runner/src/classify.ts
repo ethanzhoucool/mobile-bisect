@@ -1,5 +1,5 @@
 /**
- * Verdict classification — the single most load-bearing decision in the tool.
+ * Verdict classification, the single most load-bearing decision in the tool.
  *
  * A bisect is only as honest as its ability to tell "the app is broken" from
  * "the harness is broken". Get it wrong in one direction and a flaky device
@@ -15,7 +15,7 @@ import type { StepOutcome } from './cli-adapter.js';
 
 /**
  * stderr shapes that mean the harness broke, captured from CLI v0.1.71.
- * `Error: validation failed` is deliberately absent — that one is the app
+ * `Error: validation failed` is deliberately absent, that one is the app
  * answering "no", which is a real `fail`.
  */
 const INFRA_STDERR = [
@@ -115,7 +115,7 @@ export function classify(input: ClassifyInput): Classification {
     return { verdict: 'fail', reason: assertionReason(assertion, 'The assertion did not hold.') };
   }
 
-  // Envelope came back healthy but carried no boolean — treat the absence of an
+  // Envelope came back healthy but carried no boolean, treat the absence of an
   // answer as an absence of evidence, never as a failure.
   if (assertion.success === true) {
     return { verdict: 'pass', reason: assertionReason(assertion, 'The assertion held.') };

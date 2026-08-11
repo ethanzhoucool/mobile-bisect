@@ -30,7 +30,7 @@ export function parseLines(text: string): unknown[] {
     try {
       out.push(JSON.parse(s));
     } catch {
-      /* a half-written trailing line during a live run — skip it */
+      /* a half-written trailing line during a live run, skip it */
     }
   }
   return out;

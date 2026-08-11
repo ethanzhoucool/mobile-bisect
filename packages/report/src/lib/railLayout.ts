@@ -18,7 +18,7 @@ const MAX_ACTIVE_SLOT = 92;
 const MIN_SLOT = 6;
 
 /**
- * Positions every commit on the rail. Eliminated commits are never removed —
+ * Positions every commit on the rail. Eliminated commits are never removed -
  * they keep a (shrinking) slot so the audience can still see how wide the
  * search started. The live range is pulled to the centre and given as much room
  * as it can use, which is what makes each round feel like a collapse.

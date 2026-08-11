@@ -134,7 +134,7 @@ export const CURATED_NATIVE_MODULES = new Set([
 
 /**
  * `expo-router` ships JS in recent SDKs, but its native peers move with majors,
- * so it is only flagged on a major bump — see `isNativeDependencyChange`.
+ * so it is only flagged on a major bump, see `isNativeDependencyChange`.
  */
 export const MAJOR_ONLY_NATIVE_MODULES = new Set(['expo-router']);
 

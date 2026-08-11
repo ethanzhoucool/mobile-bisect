@@ -23,7 +23,7 @@ function runToCompletion(n: number, culprit: number) {
   return { bisector: b, events, candidates, commits };
 }
 
-describe('Bisector — binary search', () => {
+describe('Bisector, binary search', () => {
   it('walks the fixture indices for 64 commits with the culprit at 41', () => {
     const { candidates, bisector, events } = runToCompletion(64, 41);
     expect(candidates).toEqual([31, 47, 39, 43, 41, 40]);
@@ -58,7 +58,7 @@ describe('Bisector — binary search', () => {
   });
 });
 
-describe('Bisector — edge cases', () => {
+describe('Bisector, edge cases', () => {
   it('resolves a 2-commit range with no rounds at all', () => {
     const commits = makeCommits(2);
     const { events, emit } = recorder();
@@ -125,7 +125,7 @@ describe('Bisector — edge cases', () => {
   });
 });
 
-describe('Bisector — skip', () => {
+describe('Bisector, skip', () => {
   it('walks outward from the midpoint when a commit is skipped', () => {
     const commits = makeCommits(16);
     const { emit } = recorder();
@@ -192,7 +192,7 @@ describe('Bisector — skip', () => {
   });
 });
 
-describe('Bisector — inconclusive', () => {
+describe('Bisector, inconclusive', () => {
   it('does not narrow the range and keeps the same candidate active', () => {
     const commits = makeCommits(16);
     const { events, emit } = recorder();
@@ -233,7 +233,7 @@ describe('Bisector — inconclusive', () => {
   });
 });
 
-describe('Bisector — event bookkeeping', () => {
+describe('Bisector, event bookkeeping', () => {
   it('emits flow steps and running markers for the active candidate only', () => {
     const commits = makeCommits(8);
     const { events, emit } = recorder();

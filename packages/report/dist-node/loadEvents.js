@@ -25,7 +25,7 @@ export function parseLines(text) {
             out.push(JSON.parse(s));
         }
         catch {
-            /* a half-written trailing line during a live run — skip it */
+            /* a half-written trailing line during a live run, skip it */
         }
     }
     return out;

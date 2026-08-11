@@ -4,7 +4,7 @@
  * Plain ANSI, repainted in place: a header that mirrors the web command bar, a
  * commit rail with a bracket under the range still in play, whatever candidates
  * are on a device right now, and the culprit block at the end. This is what
- * people who never open the browser see — and what gets screen-recorded.
+ * people who never open the browser see, and what gets screen-recorded.
  */
 
 import pc from 'picocolors';
@@ -69,7 +69,7 @@ export class LiveSink implements EventSink {
         this.commits = e.commits;
         this.indexBySha = new Map(e.commits.map((c, i) => [c.sha, i]));
         this.cells = e.commits.map(() => 'untested' as RailCellState);
-        // The boundaries are known by definition — show them straight away.
+        // The boundaries are known by definition, show them straight away.
         if (this.cells.length > 0) this.cells[0] = 'good';
         if (this.cells.length > 1) this.cells[this.cells.length - 1] = 'bad';
         this.activeRange = [1, Math.max(1, e.commits.length - 2)];

@@ -36,7 +36,7 @@ export function CommitRail({
 }: CommitRailProps) {
   const [hover, setHover] = useState<number | null>(null);
 
-  // Scripted reveal beats — all pure functions of `reveal`, so scrubbing
+  // Scripted reveal beats, all pure functions of `reveal`, so scrubbing
   // backwards replays them exactly.
   const spread = easeOut(spanned(reveal, 0, 0.17)) * 24;
   const dim = spanned(reveal, 0.29, 0.54);

@@ -17,7 +17,7 @@ export interface ExecOptions {
   timeoutMs?: number;
   /** Ctrl-C from the CLI. Same teardown as a timeout, different verdict. */
   signal?: AbortSignal;
-  /** Every output line, live. Build logs are noisy — callers usually filter. */
+  /** Every output line, live. Build logs are noisy, callers usually filter. */
   onLine?: (line: string) => void;
   /** Output lines retained for the failure message. Default 80. */
   keepLines?: number;
@@ -156,8 +156,8 @@ function describe(o: ExecOutcome): string {
 /**
  * Serialises builds.
  *
- * Two xcodebuilds at once are slower than one after the other — they contend
- * for the same cores — and they corrupt a shared derived-data directory. The
+ * Two xcodebuilds at once are slower than one after the other, they contend
+ * for the same cores, and they corrupt a shared derived-data directory. The
  * search may still evaluate candidates speculatively; they queue here.
  */
 export class Mutex {

@@ -46,7 +46,7 @@ describe('isInfraFailure', () => {
   });
 });
 
-describe('classify — the verdict table', () => {
+describe('classify, the verdict table', () => {
   it('pass: the worker evaluated the assertion and the app answered yes', () => {
     const r = classify({ assertion: passing(), stepsCompleted: 3 });
     expect(r.verdict).toBe('pass');

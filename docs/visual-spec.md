@@ -1,6 +1,6 @@
 # Visual specification
 
-The report is not a test runner with rows of text. Its job is to make binary search *visible* — to communicate four things without a word of narration:
+The report is not a test runner with rows of text. Its job is to make binary search *visible*, to communicate four things without a word of narration:
 
 1. There are many possible commits.
 2. The system is testing real application builds on real mobile runtimes.
@@ -26,11 +26,11 @@ Everything below serves that. Design target is a 1440×900 desktop viewport that
 
 ## Type and spacing
 
-Inter or Geist for labels and prose. Geist Mono (or an equivalent) for hashes, commands, logs, timings, and code. Fonts are bundled locally — the static report must render with no network.
+Inter or Geist for labels and prose. Geist Mono (or an equivalent) for hashes, commands, logs, timings, and code. Fonts are bundled locally, the static report must render with no network.
 
 **The smallest important text is 18px at 1440×900.** This is a hard floor, not a preference: the report gets uploaded to X, and X's encoder destroys thin low-contrast type. No hairline strokes on anything that carries meaning.
 
-Rigid 8px spacing system. The canvas stays open and calm. The phones, the commit rail, and the final comparison carry the visual weight — everything else recedes. Avoid excessive panels, rounded cards, badges, and decorative gradients.
+Rigid 8px spacing system. The canvas stays open and calm. The phones, the commit rail, and the final comparison carry the visual weight, everything else recedes. Avoid excessive panels, rounded cards, badges, and decorative gradients.
 
 ## Layout: four persistent regions
 
@@ -43,9 +43,9 @@ mobile-bisect  checkout-flow  v1.4.0..HEAD  64 commits  expected: order confirma
                                                        ROUND 3 OF 6    8 COMMITS REMAIN
 ```
 
-Values update with short number transitions. This is status, not theater — it should not look like a decorative fake terminal.
+Values update with short number transitions. This is status, not theater, it should not look like a decorative fake terminal.
 
-### 2. Commit rail — the centerpiece
+### 2. Commit rail, the centerpiece
 
 A horizontal line of nodes beneath the command bar, one node per real commit in the ancestry path. 64 at the start.
 
@@ -61,7 +61,7 @@ A horizontal line of nodes beneath the command bar, one node per real commit in 
 
 Nodes show their abbreviated hash when focused or selected. Hover reveals subject, author, and timestamp.
 
-**The collapse is the whole point.** When a round completes, commits outside the remaining range compress and fade to 20% opacity while the remaining range expands to occupy the center. Nodes *travel* to their new positions — measured, then animated (FLIP). They never unmount and remount. The viewer has to feel the search space collapsing.
+**The collapse is the whole point.** When a round completes, commits outside the remaining range compress and fade to 20% opacity while the remaining range expands to occupy the center. Nodes *travel* to their new positions, measured, then animated (FLIP). They never unmount and remount. The viewer has to feel the search space collapsing.
 
 **Eliminated commits are never deleted.** They stay on screen as compressed history so the audience can see where the search started and how far it has come.
 
@@ -69,13 +69,13 @@ A subtle bracket sits under the active range and animates inward on each narrowi
 
 ### 3. Device stage
 
-The center of the screen. Two device cards in a normal round: the current candidate, and the closest known good or bad boundary. An optional four-up parallel mode exists for the launch demo — the search stays binary internally, but multiple useful candidates can be evaluated concurrently when cloud capacity allows.
+The center of the screen. Two device cards in a normal round: the current candidate, and the closest known good or bad boundary. An optional four-up parallel mode exists for the launch demo, the search stays binary internally, but multiple useful candidates can be evaluated concurrently when cloud capacity allows.
 
 Each card carries:
 
 - The live stream or recorded replay, in an iPhone frame
 - Commit hash and subject above
-- Current flow step below — `4 / 7  Tap "Place order"`
+- Current flow step below, `4 / 7  Tap "Place order"`
 - A thin progress timeline
 - A good / bad / inconclusive badge
 
@@ -100,7 +100,7 @@ One playhead drives both recordings, synchronized. At the breaking step, playbac
 
 At that moment: the good phone transitions to order confirmation, and the bad phone stays on checkout in a loading state. A thin connector line points from the failed screen region to the relevant evidence card.
 
-A toggleable difference overlay uses a restrained heatmap — changed regions in pink or red, unchanged regions dimmed slightly. **No full-screen pixel snow.** Prefer semantic regions: the missing confirmation panel, the stuck call to action.
+A toggleable difference overlay uses a restrained heatmap, changed regions in pink or red, unchanged regions dimmed slightly. **No full-screen pixel snow.** Prefer semantic regions: the missing confirmation panel, the stuck call to action.
 
 One concise diagnostic sentence sits below the phones:
 
@@ -114,7 +114,7 @@ The Code tab opens the commit diff with the suspected line highlighted. **Do not
 ## Motion principles
 
 1. **Preserve spatial continuity.** Commit nodes move into their new positions. They never disappear and reappear.
-2. **Make narrowing feel fast.** Each completed round collapses in 400–600ms.
+2. **Make narrowing feel fast.** Each completed round collapses in 400-600ms.
 3. **Let device playback stay readable.** Do not animate the surrounding interface aggressively while the app is being tested.
 4. **Color only when known.** Transition to green or red when a result arrives, never speculatively.
 5. **Reserve the strongest animation for the culprit reveal.**
@@ -137,7 +137,7 @@ It should feel **conclusive, not celebratory**. No confetti, no particles, no bo
 
 The interface is going to be screen-recorded, so recording is a feature, not an afterthought:
 
-- A replay controller with play, pause, scrub, and **speed control** — the accelerated rounds in the launch video are real playback, not a post-production trick.
+- A replay controller with play, pause, scrub, and **speed control**, the accelerated rounds in the launch video are real playback, not a post-production trick.
 - `?chrome=off` hides dev affordances for clean capture.
 - Deterministic playback: same event stream in, same frames out. No `Math.random()`, no wall-clock-dependent layout.
 
@@ -145,4 +145,4 @@ The opening frame of any capture must contain a moving device. Never open on a l
 
 ## Accessibility of meaning
 
-The interface has to be understandable with the sound off, because it will be watched with the sound off. Nothing important may be carried by color alone — good and bad nodes differ in fill *and* the run result is stated in text under the device. Every state that matters has a label somewhere on screen.
+The interface has to be understandable with the sound off, because it will be watched with the sound off. Nothing important may be carried by color alone, good and bad nodes differ in fill *and* the run result is stated in text under the device. Every state that matters has a label somewhere on screen.

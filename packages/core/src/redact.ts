@@ -25,7 +25,7 @@ const SECRET_ENV = /(API[_-]?KEY|SECRET|PASSWORD|PASSPHRASE|TOKEN|CREDENTIAL)/i;
 
 /**
  * Literal values of credential-shaped env vars, longest first so a key that
- * contains another as a prefix still redacts fully. Short values are ignored —
+ * contains another as a prefix still redacts fully. Short values are ignored -
  * scrubbing a 6-char string would corrupt unrelated output.
  */
 function envSecretValues(): string[] {

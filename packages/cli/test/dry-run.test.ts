@@ -171,7 +171,7 @@ describe('mobile-bisect run --dry-run', () => {
       expect(flaky[0]!.state).toBe('inconclusive');
       expect(flaky[1]!.attempt).toBe(2);
       expect(['good', 'bad', 'skipped']).toContain(flaky[1]!.state);
-      expect(result.stdout).toContain('inconclusive — retrying once');
+      expect(result.stdout).toContain('inconclusive, retrying once');
 
       const found = events.find((e) => e.type === 'culprit.found') as { badSha: string };
       expect(found.badSha).toBe(shas[10]);

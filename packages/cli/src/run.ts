@@ -6,7 +6,7 @@
  * Bisector owns strict invariants: exactly one candidate is active at a time,
  * `markRunning`/`step`/`record` must name that candidate, and an inconclusive
  * result keeps it active for the retry. Two rules of our own shape the rest:
- *   1. The user's working tree is never touched — every candidate is checked
+ *   1. The user's working tree is never touched, every candidate is checked
  *      out into a detached worktree and removed afterwards.
  *   2. Every event is scrubbed before it reaches disk, the terminal or the
  *      report, so a run directory can be attached to a bug report as-is.
@@ -159,7 +159,7 @@ export async function runCommand(opts: RunOptions): Promise<number> {
 /**
  * Chooses the adapter and lets it veto the range before a device is started.
  *
- * The precheck is where an adapter refuses work it cannot answer honestly —
+ * The precheck is where an adapter refuses work it cannot answer honestly -
  * the Expo adapter rejects a range containing native changes, because swapping
  * JavaScript underneath the wrong binary produces a confident wrong answer.
  */
@@ -195,7 +195,7 @@ async function buildAdapter(input: {
   }
 
   ui.note(
-    pc.dim(`  ${resolved.adapter.displayName}${resolved.detection.summary ? ` — ${resolved.detection.summary}` : ''}`),
+    pc.dim(`  ${resolved.adapter.displayName}${resolved.detection.summary ? `, ${resolved.detection.summary}` : ''}`),
   );
   if (resolved.adapter.candidateKind === 'binary') {
     ui.note(
@@ -220,7 +220,7 @@ async function buildAdapter(input: {
   return { name: resolved.name, adapter: resolved.adapter };
 }
 
-/** ceil(log2(n)) — 64 commits resolve in 6 classification decisions. */
+/** ceil(log2(n)), 64 commits resolve in 6 classification decisions. */
 function plannedRounds(commitCount: number): number {
   return Math.max(1, Math.ceil(Math.log2(commitCount)));
 }
@@ -384,7 +384,7 @@ class BisectRun {
 
   async start(commits: CommitSummary[], meta: BisectMeta): Promise<number> {
     // With no interior to search the boundaries are already adjacent, and the
-    // Bisector names the culprit inside its constructor — so the diagnosis has
+    // Bisector names the culprit inside its constructor, so the diagnosis has
     // to be ready before that happens.
     if (commits.length === 2) {
       this.injectedDiagnosis = await this.diagnosisFor(
@@ -401,7 +401,7 @@ class BisectRun {
     this.bisector = Bisector.resume(state, this.emit);
     this.ui.note(
       pc.dim(
-        `  resuming ${this.store.runId} — ${Object.keys(state.results).length} commits already classified`,
+        `  resuming ${this.store.runId}, ${Object.keys(state.results).length} commits already classified`,
       ),
     );
     return this.drive();
@@ -446,7 +446,7 @@ class BisectRun {
     const inFlight = this.speculative.get(commit.sha);
     if (inFlight) {
       this.speculative.delete(commit.sha);
-      this.ui.note(pc.dim(`  ${commit.shortSha} was already running ahead — using that result`));
+      this.ui.note(pc.dim(`  ${commit.shortSha} was already running ahead, using that result`));
       return inFlight;
     }
     return this.runCandidate(commit, true);
@@ -512,7 +512,7 @@ class BisectRun {
           };
           if (active) this.bisector.record(interim);
           else this.emit({ type: 'commit.completed', at: nowIso(), result: interim });
-          this.ui.note(pc.dim(`  ${commit.shortSha} was inconclusive — retrying once`));
+          this.ui.note(pc.dim(`  ${commit.shortSha} was inconclusive, retrying once`));
         }
         return run;
       });
@@ -793,7 +793,7 @@ class BisectRun {
 
   /** Ctrl-C: stop devices, remove worktrees, flush state, say how to resume. */
   private async abort(): Promise<void> {
-    this.ui.note(pc.yellow('\n  interrupted — stopping devices and cleaning up worktrees…'));
+    this.ui.note(pc.yellow('\n  interrupted, stopping devices and cleaning up worktrees…'));
     this.closing = true;
     await this.cleanup();
     try {
@@ -819,7 +819,7 @@ class BisectRun {
       await worktree.cleanup().catch(() => {});
     }
     // Metro servers, allocated ports and any shared build state the adapter is
-    // holding. Cached artifacts survive on purpose — a resume wants them.
+    // holding. Cached artifacts survive on purpose, a resume wants them.
     await this.adapter.dispose?.().catch(() => {});
     await git.cleanupAllWorktrees(this.repo).catch(() => {});
   }
@@ -876,7 +876,7 @@ async function enumerateCommits(
   const max = opts.maxCandidates ?? config.maxCandidates ?? 64;
   if (commits.length > max) {
     throw new CliError(
-      `${commits.length} commits between \`${opts.good}\` and \`${opts.bad}\` — more than the ${max}-commit guard.`,
+      `${commits.length} commits between \`${opts.good}\` and \`${opts.bad}\`, more than the ${max}-commit guard.`,
       {
         hint: `That is about ${Math.ceil(Math.log2(commits.length))} device runs. Pick a closer --good ref, or raise --max-candidates ${commits.length}.`,
       },
@@ -919,7 +919,7 @@ function buildMeta(input: {
 }
 
 function makeRunId(flowName: string): string {
-  // 20260807T234910 — sortable, so lexical order is time order.
+  // 20260807T234910, sortable, so lexical order is time order.
   const stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15);
   const slug =
     flowName
@@ -1031,7 +1031,7 @@ async function openUi(
       closeServer = () => server.close();
       merged.note(pc.dim(`  live view  ${pc.cyan(server.url)}`));
     } catch {
-      merged.note(pc.dim(`  live view unavailable on port ${serveOpts.port} — terminal only`));
+      merged.note(pc.dim(`  live view unavailable on port ${serveOpts.port}, terminal only`));
     }
   }
 
@@ -1056,7 +1056,7 @@ async function readSidecar(dir: string): Promise<RunSidecar | null> {
 /**
  * Make the tool directory invisible to git: a `.gitignore` of `*` inside it
  * ignores its own contents, so runs and worktrees never show up as untracked
- * work — and we never edit a file the user owns.
+ * work, and we never edit a file the user owns.
  */
 export async function ensureToolDirIgnored(repo: string): Promise<void> {
   const dir = path.join(repo, TOOL_DIR);

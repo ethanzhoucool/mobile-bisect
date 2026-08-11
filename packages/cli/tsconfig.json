@@ -7,7 +7,7 @@
     "baseUrl": ".",
     // core and git are hard dependencies and resolve normally. report and
     // revyl-runner are optional at runtime, so each mapping tries the sibling's
-    // built types first and falls back to a local shim — the CLI still compiles
+    // built types first and falls back to a local shim, the CLI still compiles
     // (and still runs, see src/adapters.ts) when they are absent.
     "paths": {
       "@mobile-bisect/report": [

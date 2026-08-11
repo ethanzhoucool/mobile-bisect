@@ -9,8 +9,8 @@ import type { CommitResult } from '../types.ts';
 export interface NetworkRow {
   method: string;
   path: string;
-  status: number | '—';
-  ms: number | '—';
+  status: number | '-';
+  ms: number | '-';
   note?: string;
   flag?: 'key' | 'missing';
 }
@@ -103,8 +103,8 @@ function fixtureEvidence(bad?: CommitResult, good?: CommitResult): Evidence {
       {
         method: 'GET',
         path: '/v1/orders/A-10428',
-        status: '—',
-        ms: '—',
+        status: '-',
+        ms: '-',
         note: 'never sent on this build',
         flag: 'missing',
       },
@@ -113,7 +113,7 @@ function fixtureEvidence(bad?: CommitResult, good?: CommitResult): Evidence {
       { time: '16:42:09.412', level: 'info', tag: 'checkout', message: 'placing order (items=1, total=133.20)' },
       { time: '16:42:09.724', level: 'info', tag: 'api', message: 'POST /v1/orders → 200 in 312ms' },
       { time: '16:42:09.731', level: 'warn', tag: 'orders', message: 'parseOrderResponse: orderId undefined', flag: true },
-      { time: '16:42:09.733', level: 'error', tag: 'nav', message: 'router.push("/order/undefined") ignored — no matching route', flag: true },
+      { time: '16:42:09.733', level: 'error', tag: 'nav', message: 'router.push("/order/undefined") ignored, no matching route', flag: true },
       { time: '16:42:11.900', level: 'error', tag: 'flow', message: 'assertion failed: order confirmation heading not found' },
     ],
     diffFile: 'app/checkout/useSubmitOrder.ts',

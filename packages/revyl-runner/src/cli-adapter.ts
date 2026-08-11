@@ -1,7 +1,7 @@
 /**
  * Every fact about the Revyl CLI lives here: argv construction and response
  * parsing, nothing else. `runner.ts` reads as plain orchestration because this
- * module absorbs the CLI's shape — and when the CLI changes, only this file and
+ * module absorbs the CLI's shape, and when the CLI changes, only this file and
  * `fixtures/` move.
  *
  * Shapes below were captured from Revyl CLI v0.1.71 (see `fixtures/`), not from
@@ -13,7 +13,7 @@ import type { CliResult } from './exec.js';
 import { UnsupportedStepError } from './errors.js';
 
 // ---------------------------------------------------------------------------
-// argv builders — pure, and always arrays so nothing is ever shell-interpolated
+// argv builders, pure, and always arrays so nothing is ever shell-interpolated
 // ---------------------------------------------------------------------------
 
 /** `-s <index>` targets a session positionally; `-1` means "the active one". */
@@ -42,7 +42,7 @@ export interface StartSessionArgs {
 
 /**
  * `device targets` lists runtimes as `iOS 18.5` / `Android 14`, and the API
- * rejects a bare `18.5` with `unsupported ios runtime "18.5"` — but a bare
+ * rejects a bare `18.5` with `unsupported ios runtime "18.5"`, but a bare
  * number is what everyone types, and what a device matrix in a doc looks like.
  * Normalising here means one place knows, instead of every caller.
  */
@@ -126,7 +126,7 @@ export function deviceKillAppArgs(target: SessionTarget): string[] {
 
 /**
  * The JS swap. Opening the candidate's dev-client deep link makes the already
- * installed dev client fetch that candidate's bundle — no native rebuild.
+ * installed dev client fetch that candidate's bundle, no native rebuild.
  */
 export function deviceNavigateArgs(url: string, target: SessionTarget): string[] {
   return withTarget(['device', 'navigate', '--json', '--url', url], target);
@@ -408,8 +408,8 @@ export interface RemoteBuildArgs {
 /**
  * Builds a candidate on Revyl's cloud runners instead of on this machine.
  *
- * The CLI uploads the working directory it is pointed at — which for a bisect
- * is a detached worktree at one commit — runs the project's configured build
+ * The CLI uploads the working directory it is pointed at, which for a bisect
+ * is a detached worktree at one commit, runs the project's configured build
  * command on a Revyl macOS runner, and registers the artifact. No local Xcode,
  * no local Gradle, no local JDK.
  *
@@ -439,7 +439,7 @@ export interface UploadedBuildInfo {
 
 /**
  * `build upload --json` has moved its id around across CLI versions, and a
- * build id is the one thing the install step cannot do without — so every
+ * build id is the one thing the install step cannot do without, so every
  * shape that has appeared is accepted, at the top level or one nesting down.
  */
 export function parseUploadedBuild(res: CliResult): UploadedBuildInfo | undefined {
@@ -587,7 +587,7 @@ export interface SessionReport {
   sessionStatus?: string;
   /** Presigned S3 frames, before + after each grounded action, in step order. */
   frames: ReportFrame[];
-  /** The same URLs, flattened — what `Artifacts.screenshots` carries. */
+  /** The same URLs, flattened, what `Artifacts.screenshots` carries. */
   screenshotUrls: string[];
 }
 

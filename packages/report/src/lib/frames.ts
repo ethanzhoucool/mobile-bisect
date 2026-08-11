@@ -52,7 +52,7 @@ export function framesAreStepped(frames: string[]): boolean {
  * The frame to show at flow position `pos`.
  *
  * With stepped names this is the *last* frame of the highest step at or below
- * `pos`, preferring an `after` shot — the state the app settled into once that
+ * `pos`, preferring an `after` shot, the state the app settled into once that
  * step finished, which is what a viewer is trying to compare.
  */
 export function frameIndexFor(pos: number, count: number, totalSteps: number, frames?: string[]): number {

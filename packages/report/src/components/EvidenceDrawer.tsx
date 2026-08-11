@@ -41,7 +41,7 @@ const CROP_W = 250;
 const CROP_H = 114;
 
 /**
- * A clipped window onto the final step — the captured frame when the run has
+ * A clipped window onto the final step, the captured frame when the run has
  * one, the drawn placeholder otherwise. Both crop identically so the good/bad
  * pair always lines up region for region.
  */
@@ -234,10 +234,10 @@ export function EvidenceDrawer({
               <div className="ev-net-row" key={r.method + r.path} data-flag={r.flag} data-anchor={r.flag === 'key' ? 'evidence-focus' : undefined}>
                 <span className="ev-net-method">{r.method}</span>
                 <span className="ev-net-path">{r.path}</span>
-                <span className="ev-net-status" data-missing={r.status === '—'}>
+                <span className="ev-net-status" data-missing={r.status === '-'}>
                   {r.status}
                 </span>
-                <span className="ev-net-ms">{r.ms === '—' ? '—' : `${r.ms}ms`}</span>
+                <span className="ev-net-ms">{r.ms === '-' ? '-' : `${r.ms}ms`}</span>
                 <span className="ev-net-note">{r.note}</span>
               </div>
             ))}

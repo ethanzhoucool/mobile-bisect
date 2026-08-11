@@ -80,7 +80,7 @@ export class Bisector {
   /**
    * Rebuild a Bisector from persisted state by replaying the recorded results.
    * Deterministic, so a resumed run picks up on exactly the round and range it
-   * left off at. Emits nothing — the events for replayed rounds already exist.
+   * left off at. Emits nothing, the events for replayed rounds already exist.
    */
   static resume(state: BisectState, emit: (e: BisectEvent) => void): Bisector {
     const b = Object.create(Bisector.prototype) as Bisector;
@@ -167,7 +167,7 @@ export class Bisector {
   }
 
   /**
-   * Pick the next commit to test. Returns null once the search is over —
+   * Pick the next commit to test. Returns null once the search is over -
    * either resolved (see `culprit`) or failed (every candidate skipped).
    */
   nextCandidate(): CommitSummary | null {
@@ -215,7 +215,7 @@ export class Bisector {
 
   /**
    * Classify the active candidate. `inconclusive` records the attempt but does
-   * not narrow the range — the caller retries (see RetryPolicy) and then
+   * not narrow the range, the caller retries (see RetryPolicy) and then
    * downgrades to `skipped`.
    */
   record(result: CommitResult): void {
@@ -372,7 +372,7 @@ export class Bisector {
     const tested = Object.keys(this.results).length;
     if (pending && !pendingHasResult) {
       // A persisted round ahead of the result count means round.started was
-      // already emitted for this candidate — the crash landed mid-round.
+      // already emitted for this candidate, the crash landed mid-round.
       const midRound = persistedRound > tested;
       this.activeSha = midRound ? pending : null;
       this.roundNo = midRound ? persistedRound : tested;

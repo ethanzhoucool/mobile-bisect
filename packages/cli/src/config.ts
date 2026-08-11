@@ -3,7 +3,7 @@
  *
  * The config is a TypeScript file because that is what a JavaScript project
  * expects to see, but Node 18 cannot import one. Rather than pull in a transpiler we
- * read the object literal directly — the file we write is always a single
+ * read the object literal directly, the file we write is always a single
  * `defineConfig({...})` call, and hand-edits stay within that shape.
  */
 
@@ -310,7 +310,7 @@ class LiteralReader {
     if (word === 'null' || word === 'undefined') return undefined;
     const n = Number(word);
     if (!Number.isNaN(n) && word !== '') return n;
-    // An expression (a call, a variable) — not something we can evaluate safely.
+    // An expression (a call, a variable), not something we can evaluate safely.
     throw new Error(`can't read the value \`${word}\` without running the file`);
   }
 }

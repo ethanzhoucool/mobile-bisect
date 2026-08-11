@@ -29,7 +29,7 @@ describe('redact', () => {
 
   it('leaves the things a report needs intact', () => {
     const sha = '8d4c2f19b3e7a5c0d8f2b6a4e9c1d7f3a5b8e204';
-    expect(redact(`culprit ${sha} — Refactor order response handling`)).toContain(sha);
+    expect(redact(`culprit ${sha}, Refactor order response handling`)).toContain(sha);
     expect(redact('POST /orders returned 200 but the app stayed on checkout.')).toBe(
       'POST /orders returned 200 but the app stayed on checkout.',
     );

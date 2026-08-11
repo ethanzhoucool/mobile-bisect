@@ -1,8 +1,8 @@
 /**
  * A built artifact per commit, kept outside the worktrees.
  *
- * Worktrees are transient — created for a candidate, removed the moment it is
- * classified — so anything expensive built inside one is gone by the next
+ * Worktrees are transient, created for a candidate, removed the moment it is
+ * classified, so anything expensive built inside one is gone by the next
  * round. That matters more here than for a JS swap: a resumed run, a retry
  * after an inconclusive verdict, and the final "last good vs first bad"
  * comparison all want a commit that was already built. A commit's source is
@@ -42,7 +42,7 @@ export class BuildCache {
     this.root = root;
   }
 
-  /** `<root>/<platform>/<slug>/<sha>` — one directory per commit per config. */
+  /** `<root>/<platform>/<slug>/<sha>`, one directory per commit per config. */
   dirFor(key: CacheKey): string {
     return path.join(this.root, key.platform, slug(key.params), key.sha);
   }
@@ -121,7 +121,7 @@ export class BuildCache {
   }
 }
 
-/** Stable, filesystem-safe, and readable in a `ls` — debuggability beats brevity. */
+/** Stable, filesystem-safe, and readable in a `ls`, debuggability beats brevity. */
 export function slug(params: Record<string, string | undefined>): string {
   const parts = Object.entries(params)
     .filter((e): e is [string, string] => typeof e[1] === 'string' && e[1] !== '')

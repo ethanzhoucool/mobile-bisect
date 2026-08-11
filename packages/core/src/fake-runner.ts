@@ -33,7 +33,7 @@ export interface FakeRunnerOptions {
   stepDelayMs?: number;
   /** Returns `inconclusive` on its first attempt, then its true verdict. */
   flakySha?: string;
-  /** Override the generated copy — demos use this to pin exact reason strings. */
+  /** Override the generated copy, demos use this to pin exact reason strings. */
   reasons?: FakeRunnerReasons;
 }
 
@@ -125,7 +125,7 @@ export class FakeRunner implements MobileRuntimeRunner {
           ? 'fail'
           : 'pass';
 
-    // An inconclusive run dies partway; pass/fail both walk the whole flow —
+    // An inconclusive run dies partway; pass/fail both walk the whole flow -
     // a broken build still taps every button, it just never lands.
     const dropAt = Math.max(1, Math.ceil(total / 2));
     const stepsCompleted = verdict === 'inconclusive' ? Math.min(dropAt, total) : total;
@@ -197,7 +197,7 @@ export class FakeRunner implements MobileRuntimeRunner {
     }
     return (
       this.reasons.inconclusive ??
-      `Device session dropped at step ${stepsCompleted} of ${total} ("${steps[stepsCompleted - 1]?.label ?? 'unknown'}"). No verdict — the flow never reached the assertion.`
+      `Device session dropped at step ${stepsCompleted} of ${total} ("${steps[stepsCompleted - 1]?.label ?? 'unknown'}"). No verdict, the flow never reached the assertion.`
     );
   }
 

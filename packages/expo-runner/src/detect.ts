@@ -31,7 +31,7 @@ export async function detectExpoProject(dir: string): Promise<ExpoProjectInfo> {
   try {
     raw = await fs.readFile(pkgPath, 'utf8');
   } catch {
-    return { ok: false, reason: `no package.json in ${dir} — this is not a JavaScript project` };
+    return { ok: false, reason: `no package.json in ${dir}, this is not a JavaScript project` };
   }
 
   let pkg: Record<string, unknown>;
@@ -58,7 +58,7 @@ export async function detectExpoProject(dir: string): Promise<ExpoProjectInfo> {
           'Expo dev client, so the project needs the expo package installed.',
       };
     }
-    return { ok: false, reason: `${dir} has no "expo" dependency — not an Expo project` };
+    return { ok: false, reason: `${dir} has no "expo" dependency, not an Expo project` };
   }
 
   const info: ExpoProjectInfo = { ok: true, usesRouter: Boolean(deps['expo-router'] ?? devDeps['expo-router']) };
@@ -89,7 +89,7 @@ export async function findAppConfigFile(dir: string): Promise<string | undefined
 
 /**
  * Static read of app.json only. `app.config.js/ts` needs evaluation, which we
- * refuse to do here — `expo config --json` is the caller's escape hatch.
+ * refuse to do here, `expo config --json` is the caller's escape hatch.
  */
 export async function readAppJson(dir: string): Promise<unknown> {
   try {

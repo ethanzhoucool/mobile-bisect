@@ -133,7 +133,7 @@ describe('helpText', () => {
   });
 
   it('has a focused page per command', () => {
-    expect(helpText('run')).toContain('mobile-bisect run —');
-    expect(helpText('init')).toContain('mobile-bisect init —');
+    expect(helpText('run')).toContain('mobile-bisect run:');
+    expect(helpText('init')).toContain('mobile-bisect init:');
   });
 });

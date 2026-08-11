@@ -1,6 +1,6 @@
 # @mobile-bisect/expo-runner
 
-Prepares a candidate commit's JavaScript for a cloud device — without rebuilding the native binary.
+Prepares a candidate commit's JavaScript for a cloud device, without rebuilding the native binary.
 
 ## The core insight
 
@@ -17,7 +17,7 @@ git worktree (sha)  ->  install deps  ->  serve that commit's JS  ->  exp+<schem
 ```
 
 A bisect round drops from ~20 minutes to seconds. The price of the trick is that it only works for
-**JavaScript-only** changes — see [the native-change guard](#the-native-change-guard). For a range
+**JavaScript-only** changes, see [the native-change guard](#the-native-change-guard). For a range
 that does touch native code, `@mobile-bisect/native-runner` compiles each candidate for real:
 slower, but correct.
 
@@ -51,7 +51,7 @@ await prep.dispose();     // or runner.dispose() to tear down everything
 | Export | What it does |
 | --- | --- |
 | `ExpoCandidateRunner` | `prepare(worktreePath, sha)` -> `CandidatePrep`; `dispose()` tears down every outstanding prep |
-| `detectExpoProject(dir)` | `{ ok, sdkVersion?, usesRouter?, reason? }` — never throws |
+| `detectExpoProject(dir)` | `{ ok, sdkVersion?, usesRouter?, reason? }`, never throws |
 | `installDeps(worktree, cacheDir)` | Lockfile-pinned install with a shared, content-hashed `node_modules` cache |
 | `detectNativeChange(input)` | Pure detector: changed files + both `package.json`s -> `NativeChangeReport` |
 | `detectNativeChangeFromGit(repo, good, bad)` | `git diff --name-only` shim over the pure detector |
@@ -74,9 +74,9 @@ Metro to answer `packager-status:running` on `http://127.0.0.1:<port>/status`.
   where `<scheme>` comes from `expo.scheme` in `app.json` and falls back to `expo.slug`.
   The raw packager URL is also returned as `metroUrl`.
 - `CI` is explicitly **stripped** from the child environment. Setting `CI=1` makes `@expo/cli` disable
-  Fast Refresh — the exact mechanism the swap depends on. `EXPO_NO_TELEMETRY=1` and `EXPO_OFFLINE=1`
+  Fast Refresh, the exact mechanism the swap depends on. `EXPO_NO_TELEMETRY=1` and `EXPO_OFFLINE=1`
   are set to cut cold-start time.
-- Readiness is polled over HTTP, never scraped from stdout — the CLI's banner text changes between
+- Readiness is polled over HTTP, never scraped from stdout, the CLI's banner text changes between
   releases. stdout/stderr are still captured, and the last lines are attached to a timeout error.
 
 ### `mode: 'export'`
@@ -84,7 +84,7 @@ Metro to answer `packager-status:running` on `http://127.0.0.1:<port>/status`.
 Runs `npx expo export --platform ios --output-dir <cacheDir>/exports/<sha>` and serves the output over
 a small `node:http` static server. `bundleUrl` is the served directory root.
 
-- **Use it for**: determinism and post-mortems. The export is a frozen artifact — no watcher, no Fast
+- **Use it for**: determinism and post-mortems. The export is a frozen artifact, no watcher, no Fast
   Refresh, no chance that a stale in-memory Metro graph explains a flaky verdict. Also the fallback
   when a long-lived Metro is impractical (locked-down CI, a relay that only forwards plain HTTP).
 - Slower per candidate: a full bundle instead of an incremental one.
@@ -127,7 +127,7 @@ Six candidates must not mean six cold `npm ci` runs.
    | `pnpm-lock.yaml` | pnpm | `pnpm install --frozen-lockfile --store-dir <cacheDir>/pnpm` |
    | `bun.lockb` / `bun.lock` | bun | `bun install --frozen-lockfile` (`BUN_INSTALL_CACHE_DIR=<cacheDir>/bun`) |
 
-   Every install is strictly lockfile-pinned. **No lockfile is a hard error** — a bisect over floating
+   Every install is strictly lockfile-pinned. **No lockfile is a hard error**, a bisect over floating
    dependency ranges attributes the regression to whichever commit you happened to install on.
 
 2. A warm `node_modules` is kept per content hash under `<cacheDir>/nm/<hash>`, where the hash is
@@ -138,8 +138,8 @@ Six candidates must not mean six cold `npm ci` runs.
    macOS, `cp -al` (hardlink) elsewhere, plain `cp -R` as the fallback. The destination is verified
    afterward, and a short clone is thrown away rather than handed back.
 
-4. After a cold install the tree is seeded into the cache atomically — written to `<hash>.tmp-<pid>-<rand>`
-   and renamed — so a concurrent candidate can never read a half-copied entry. If another candidate won
+4. After a cold install the tree is seeded into the cache atomically, written to `<hash>.tmp-<pid>-<rand>`
+   and renamed, so a concurrent candidate can never read a half-copied entry. If another candidate won
    the race, the loser discards its copy. A failed seed never fails the candidate.
 
 All argv is passed as arrays through `execFile`; nothing is interpolated into a shell string.
@@ -153,17 +153,17 @@ and the machine may already be running a Metro of its own. `PortAllocator` inste
 - **binds a real `node:net` server** to prove each port is free, then releases it,
 - adds the port to an in-process reserved set **before** probing, closing the race window between
   "probe succeeded" and "Metro actually bound it",
-- releases the port on `dispose()` — including when `prepare()` fails partway,
+- releases the port on `dispose()`, including when `prepare()` fails partway,
 - throws `PortRangeExhaustedError` naming the range when nothing is left.
 
 ## Process-cleanup contract
 
-`npx expo start` is a chain — npx, `@expo/cli`, Metro workers. `child.kill()` reaps the head and leaves
+`npx expo start` is a chain, npx, `@expo/cli`, Metro workers. `child.kill()` reaps the head and leaves
 Metro holding the port, which poisons every later candidate. So:
 
 - children are spawned `detached: true` (their own process group) and killed with `process.kill(-pid)`;
 - `dispose()` sends `SIGTERM`, waits ~5s, escalates to `SIGKILL`, and resolves **only after the process
-  has actually exited** — awaited on `exit`, not `close`, because a grandchild can hold the inherited
+  has actually exited**, awaited on `exit`, not `close`, because a grandchild can hold the inherited
   stdio pipes open past its parent's death;
 - `ExpoCandidateRunner.dispose()` disposes every outstanding prep, and each prep's `dispose()` is idempotent;
 - `prepare()` tears down its own half-started child if readiness times out or throws, and returns the port;
@@ -177,7 +177,7 @@ survives.
 
 ## Reachability
 
-`host` defaults to `127.0.0.1`, which a **cloud device cannot reach** — loopback is this machine only.
+`host` defaults to `127.0.0.1`, which a **cloud device cannot reach**, loopback is this machine only.
 Readiness is always probed on loopback, but the host baked into `bundleUrl` is whatever you pass:
 
 ```ts
@@ -194,6 +194,6 @@ simply fails to connect.
 npx vitest run packages/expo-runner
 ```
 
-The pure logic — native-change rules, port allocation, package-manager detection and argv, cache keys,
-project detection, URL building — is tested without an Expo app or a network. The runner tests drive
+The pure logic, native-change rules, port allocation, package-manager detection and argv, cache keys,
+project detection, URL building, is tested without an Expo app or a network. The runner tests drive
 the real `prepare()`/`dispose()` path against a fake Metro that answers `/status`.

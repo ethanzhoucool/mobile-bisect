@@ -7,7 +7,7 @@ export const easeOut = (t: number) => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
 export const spanned = (t: number, a: number, b: number) => clamp((t - a) / (b - a), 0, 1);
 
 export function fmtDuration(ms?: number): string {
-  if (ms === undefined) return '—';
+  if (ms === undefined) return '-';
   if (ms < 1000) return `${Math.round(ms)}ms`;
   const s = ms / 1000;
   if (s < 60) return `${s.toFixed(1)}s`;

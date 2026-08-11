@@ -476,7 +476,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): ParsedArgs {
 
 // --- help ------------------------------------------------------------------
 
-const MAIN_HELP = `mobile-bisect — git bisect for visual mobile regressions
+const MAIN_HELP = `mobile-bisect, git bisect for visual mobile regressions
 
 USAGE
   mobile-bisect <command> [options]
@@ -535,7 +535,7 @@ mobile-bisect never accepts an API key as a flag. Authentication comes from your
 Revyl CLI session or REVYL_API_KEY in the environment.`;
 
 const COMMAND_HELP: Record<Command, string> = {
-  run: `mobile-bisect run — binary-search history for the commit that broke a flow
+  run: `mobile-bisect run: binary-search history for the commit that broke a flow
 
 USAGE
   mobile-bisect run --good <ref> --bad <ref> [--flow <path>] [options]
@@ -568,7 +568,7 @@ the command to resume.
   --flaky <ref>             Dry-run only: commit that goes inconclusive once
   --step-delay <ms>         Dry-run only: per-step delay (default 12)`,
 
-  init: `mobile-bisect init — set up a project
+  init: `mobile-bisect init: set up a project
 
 USAGE
   mobile-bisect init [options]
@@ -580,7 +580,7 @@ mobile-bisect.config.ts, and validates one flow against the current commit.
   --yes, -y                 Accept defaults instead of prompting
   --force                   Overwrite an existing mobile-bisect.config.ts`,
 
-  resume: `mobile-bisect resume — continue an interrupted run
+  resume: `mobile-bisect resume: continue an interrupted run
 
 USAGE
   mobile-bisect resume [run-id] [options]
@@ -593,7 +593,7 @@ already classified are not re-run.
   --json                    Emit the raw event stream as JSON lines
   --flow <path>             Override the flow recorded with the run`,
 
-  report: `mobile-bisect report — render the static HTML report
+  report: `mobile-bisect report: render the static HTML report
 
 USAGE
   mobile-bisect report [run-id] [options]
@@ -602,7 +602,7 @@ USAGE
   --no-open                 Print the path instead of opening a browser
   --json                    Print { runId, reportPath } as JSON`,
 
-  replay: `mobile-bisect replay — drive the live view from a recorded stream
+  replay: `mobile-bisect replay: drive the live view from a recorded stream
 
 USAGE
   mobile-bisect replay <fixture.jsonl> [options]

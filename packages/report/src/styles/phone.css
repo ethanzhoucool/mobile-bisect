@@ -406,7 +406,7 @@
   color: #6b7280;
 }
 
-/* assertion outline — only ever drawn once a verdict is known */
+/* assertion outline, only ever drawn once a verdict is known */
 [data-assert='pass'] {
   animation: assert-pass 600ms var(--ease-out) both;
 }
@@ -491,7 +491,7 @@
   place-items: center;
 }
 
-/* semantic visual diff — regions, never a full-frame pixel storm */
+/* semantic visual diff, regions, never a full-frame pixel storm */
 .ob-diff {
   position: absolute;
   inset: 0;

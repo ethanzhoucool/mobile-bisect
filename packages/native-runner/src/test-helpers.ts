@@ -23,7 +23,7 @@ export const ZIP_MAGIC = 'stub-artifact';
 export interface StubExecOptions {
   /** Commands that should fail, by name. */
   fail?: Record<string, { code?: number; output?: string }>;
-  /** Runs before the outcome is returned — create the artifact the adapter expects. */
+  /** Runs before the outcome is returned, create the artifact the adapter expects. */
   onCall?: (call: RecordedCall) => Promise<void> | void;
 }
 

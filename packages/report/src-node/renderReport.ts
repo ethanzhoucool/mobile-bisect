@@ -10,7 +10,7 @@ export interface RenderReportOptions {
   /** Defaults to <runDir>/report.html. */
   outPath?: string;
   /**
-   * Download captured step frames and embed them as data: URIs. On by default —
+   * Download captured step frames and embed them as data: URIs. On by default -
    * without it a shipped report points at expired presigned links.
    */
   inlineAssets?: boolean;
@@ -25,8 +25,8 @@ export interface RenderReportResult {
 }
 
 /**
- * Writes a single self-contained report.html — CSS, JS, events and captured
- * frames all inlined — that opens from file:// with no network.
+ * Writes a single self-contained report.html, CSS, JS, events and captured
+ * frames all inlined, that opens from file:// with no network.
  */
 export async function renderReportDetailed(
   opts: RenderReportOptions,
@@ -47,7 +47,7 @@ export async function renderReportDetailed(
       const warn = opts.onWarn ?? ((m: string) => console.warn(m));
       warn(
         `mobile-bisect report: ${frames.failed.length} frame(s) could not be inlined ` +
-          `(first: ${frames.failed[0].url} — ${frames.failed[0].reason})`,
+          `(first: ${frames.failed[0].url}, ${frames.failed[0].reason})`,
       );
     }
   }

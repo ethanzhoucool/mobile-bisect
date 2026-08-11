@@ -2,7 +2,7 @@
  * @mobile-bisect/expo-runner
  *
  * Prepares a candidate commit's JavaScript for a cloud device that is already
- * running an Expo dev-client build — no native rebuild per commit.
+ * running an Expo dev-client build, no native rebuild per commit.
  */
 
 export { ExpoAdapter, type ExpoAdapterOptions } from './adapter.js';

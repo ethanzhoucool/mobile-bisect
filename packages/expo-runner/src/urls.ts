@@ -2,7 +2,7 @@
  * URL construction for the dev-client handoff.
  *
  * A cloud device running an Expo dev-client build does not consume a raw Metro
- * URL — it consumes a deep link into the dev-client's own launcher, which then
+ * URL, it consumes a deep link into the dev-client's own launcher, which then
  * points its JS runtime at the given packager.
  */
 

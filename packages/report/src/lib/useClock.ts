@@ -16,7 +16,7 @@ export interface Clock {
 
 /**
  * Virtual-time clock. Everything on screen is a pure function of `t`, so a
- * scrub and a live playhead produce byte-identical frames — that is what makes
+ * scrub and a live playhead produce byte-identical frames, that is what makes
  * the report safe to screen-record and re-record.
  */
 export function useClock(opts: {

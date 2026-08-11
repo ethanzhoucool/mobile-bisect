@@ -5,7 +5,7 @@ through Xcode, **Kotlin and Java** through Gradle.
 
 ## The trade
 
-`@mobile-bisect/expo-runner` takes a shortcut — one native binary, many
+`@mobile-bisect/expo-runner` takes a shortcut, one native binary, many
 JavaScript bundles, seconds per candidate. There is no equivalent shortcut here.
 A Swift change *is* a native change, so every candidate is a real compile and a
 round costs minutes rather than seconds.
@@ -18,7 +18,7 @@ Three things make that tolerable:
   an inconclusive verdict, a resume after Ctrl-C, and the final last-good /
   first-bad comparison all hit the cache.
 - **Serialisation.** Two `xcodebuild`s at once are slower than one after the
-  other — they contend for the same cores — and they corrupt a shared
+  other, they contend for the same cores, and they corrupt a shared
   derived-data directory. Speculative candidates queue.
 
 ## Usage
@@ -79,7 +79,7 @@ nothing to do with the bug being hunted.
 
 `--build-cache` matters more here than the equivalent would for Xcode. Gradle's
 cache lives in `~/.gradle` and is keyed by task inputs rather than by path, so it
-survives the throwaway worktrees that defeat Xcode's incremental build — the
+survives the throwaway worktrees that defeat Xcode's incremental build, the
 second candidate is usually much faster than the first even though it compiles
 in a directory that has never existed before.
 
@@ -102,7 +102,7 @@ The 24 most recent builds per configuration are kept; older ones are pruned.
 A commit that does not compile is not evidence about the regression. Both
 adapters throw `CandidatePrepareError` with the compiler output attached, and the
 search skips that commit and tries its neighbour. Treating a build failure as a
-failing assertion would produce a confident, wrong answer — the one outcome
+failing assertion would produce a confident, wrong answer, the one outcome
 worse than no answer.
 
 ## Testing

@@ -52,7 +52,7 @@ class Tail {
     try {
       this.watcher = watch(this.path, kick);
     } catch {
-      /* file may not exist yet — the poll below picks it up */
+      /* file may not exist yet, the poll below picks it up */
     }
     this.timer = setInterval(kick, 500);
   }

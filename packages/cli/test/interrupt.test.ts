@@ -1,6 +1,6 @@
 /**
  * Ctrl-C has to leave the repo, the devices and the run directory in a state
- * you can walk away from — and then walk back into with `resume`.
+ * you can walk away from, and then walk back into with `resume`.
  */
 
 import { access } from 'node:fs/promises';

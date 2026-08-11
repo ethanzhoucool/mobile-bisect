@@ -21,7 +21,7 @@ describe('redactString', () => {
     expect(out).toContain(REDACTED);
   });
 
-  it('leaves presigned S3 artifact URLs intact — the report needs them', () => {
+  it('leaves presigned S3 artifact URLs intact, the report needs them', () => {
     const url =
       'https://test-metadata-revyl.s3.amazonaws.com/sess/actions/a/action-0-before.png' +
       '?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE%2F20260101%2Fus-east-1%2Fs3%2Faws4_request' +

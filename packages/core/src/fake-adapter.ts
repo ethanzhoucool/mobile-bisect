@@ -1,8 +1,8 @@
 /**
  * A `FrameworkAdapter` that prepares nothing.
  *
- * `--dry-run` pairs it with `FakeRunner` so the whole search — rounds, retries,
- * skips, the report — runs offline with no toolchain installed. It also stands
+ * `--dry-run` pairs it with `FakeRunner` so the whole search, rounds, retries,
+ * skips, the report, runs offline with no toolchain installed. It also stands
  * in for the real adapters in the CLI's tests, where spawning `xcodebuild`
  * would be absurd.
  */

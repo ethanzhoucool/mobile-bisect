@@ -39,7 +39,7 @@ export interface RevylRunnerInput {
   flow?: FlowDefinition;
   /**
    * Where captured frames land. Without these the runner writes nothing to
-   * disk, and the presigned URLs expire long before the report renders — so
+   * disk, and the presigned URLs expire long before the report renders, so
    * both must be passed for the evidence view to survive.
    */
   runDir?: string;

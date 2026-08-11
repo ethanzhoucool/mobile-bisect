@@ -431,7 +431,7 @@ describe('collectArtifacts downloads frames before their links expire', () => {
     expect(artifacts.localPaths?.[0]).toBe(`artifacts/${runId}/step-01-action-00-before.png`);
   });
 
-  it('keeps the remote URLs in screenshots and the local copies in localPaths — both, not either', async () => {
+  it('keeps the remote URLs in screenshots and the local copies in localPaths, both, not either', async () => {
     const { fetchImpl } = stubFetch();
     const { artifacts } = await collect({}, fetchImpl);
 
@@ -441,7 +441,7 @@ describe('collectArtifacts downloads frames before their links expire', () => {
   });
 
   it('a frame that already expired is skipped and leaves the verdict untouched', async () => {
-    // Expire exactly one frame — the fixture has two URLs ending `action-0-before`.
+    // Expire exactly one frame, the fixture has two URLs ending `action-0-before`.
     const expired = parseSessionReport(ok('device-report'))!.frames[0]!.url;
     const { fetchImpl } = stubFetch({ expire: (u) => u === expired });
     const logs: string[] = [];

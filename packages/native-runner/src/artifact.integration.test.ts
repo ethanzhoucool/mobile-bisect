@@ -3,7 +3,7 @@
  *
  * The rest of the suite stubs the executor, which proves the adapters *call*
  * `zip` and `plutil` correctly but not that the calls do what we think. These
- * two are system utilities — cheap to run for real, unlike the compilers — so
+ * two are system utilities, cheap to run for real, unlike the compilers, so
  * the archive is actually produced and actually read back here.
  */
 

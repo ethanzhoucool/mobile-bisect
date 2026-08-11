@@ -52,7 +52,7 @@ describe('dirty working tree', () => {
 
     expect(result.code).toBe(0);
     expect(await readFile(file, 'utf8')).toBe(DIRTY);
-    // Only the user's own edit is dirty — our runs and worktrees are ignored.
+    // Only the user's own edit is dirty, our runs and worktrees are ignored.
     const status = await git(dir, ['status', '--porcelain']);
     expect(status.split('\n')).toHaveLength(1);
     expect(status).toContain('M app/index.ts');

@@ -1,7 +1,7 @@
 /**
  * The Gradle adapter: Kotlin and Java Android apps, built per candidate.
  *
- * Same shape as the Xcode adapter — build, cache by SHA, serialise — with one
+ * Same shape as the Xcode adapter, build, cache by SHA, serialise, with one
  * difference that matters. Gradle's own build cache lives in `~/.gradle` and is
  * keyed by task inputs, not by path, so it survives the throwaway worktrees
  * that defeat Xcode's incremental build. `--build-cache` is on by default for
@@ -32,7 +32,7 @@ export interface GradleAdapterOptions {
   projectDir?: string;
   /** Gradle module to assemble. Default `app`. */
   module?: string;
-  /** Build variant. Default `debug` — a release variant needs signing config. */
+  /** Build variant. Default `debug`, a release variant needs signing config. */
   variant?: string;
   /** Overrides module+variant entirely, e.g. `:app:assembleFreeDebug`. */
   task?: string;
@@ -256,7 +256,7 @@ export class GradleAdapter implements FrameworkAdapter {
         const id = parseApplicationId(await readFile(path.join(moduleDir, name), 'utf8'));
         if (id) return id;
       } catch {
-        // no such file, or unreadable — the id is optional
+        // no such file, or unreadable, the id is optional
       }
     }
     return undefined;

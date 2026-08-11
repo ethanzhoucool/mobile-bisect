@@ -46,7 +46,7 @@ function useFrames(list?: string[]): string[] {
 
 /**
  * Captured step frames cross-faded in place. Every frame is mounted so the
- * swap is a pure opacity change — a 14-frame run still reads as motion rather
+ * swap is a pure opacity change, a 14-frame run still reads as motion rather
  * than a slideshow, and there is no decode hitch mid-playback.
  */
 function FrameStrip({
@@ -133,7 +133,7 @@ export function PhoneScreen({
     );
   }
   // No capture to show. The drawn store is the demo fixture's stand-in, and it
-  // is a different app than the one under test — rendering it for a real run
+  // is a different app than the one under test, rendering it for a real run
   // would put a screen on the phone that the run never produced.
   if (synthetic) return <OrbitStore screen={screen} assert={assert} diff={diff} />;
   return <NoCapture assert={assert} />;
@@ -153,7 +153,7 @@ export function NoCapture({ assert }: { assert?: 'pass' | 'fail' | null }) {
   );
 }
 
-/** Semantic region diff — the two runs are the same step index, so the regions line up. */
+/** Semantic region diff, the two runs are the same step index, so the regions line up. */
 export function DiffOverlay() {
   return (
     <div className="ob-diff">

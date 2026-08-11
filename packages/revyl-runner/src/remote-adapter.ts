@@ -2,7 +2,7 @@
  * The no-local-toolchain adapter.
  *
  * `@mobile-bisect/native-runner` compiles candidates on the machine running the
- * bisect, which means Xcode, a JDK, an Android SDK — and a laptop pinned for
+ * bisect, which means Xcode, a JDK, an Android SDK, and a laptop pinned for
  * however long the search takes. This adapter compiles them on Revyl's cloud
  * build runners instead: it points `revyl build --remote` at the candidate's
  * worktree, the CLI uploads that tree, the runner executes the project's own
@@ -101,7 +101,7 @@ export class RevylRemoteAdapter implements FrameworkAdapter {
       ok: true,
       // Deliberately below every local adapter. Building in the cloud is the
       // right answer when there is no toolchain here, not the default when
-      // there is — a local build has no upload and no queue.
+      // there is, a local build has no upload and no queue.
       confidence: 0.35,
       platforms,
       summary: `${CONFIG_FILE} · builds ${platforms.join(' + ')} on Revyl runners`,
@@ -167,7 +167,7 @@ export class RevylRemoteAdapter implements FrameworkAdapter {
 
   /**
    * `.revyl/` is usually untracked, and a detached worktree only contains what
-   * the commit tracked — so the build config has to be copied in from the
+   * the commit tracked, so the build config has to be copied in from the
    * user's checkout or the CLI has nothing to build with.
    *
    * The build *command* is a different matter: it runs at the candidate commit,

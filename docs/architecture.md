@@ -26,11 +26,11 @@ mobile-bisect/
 
 Git bisect already knows *which* commit to test next. It has no way to decide whether a commit is good or bad when "bad" means a screen didn't appear. `mobile-bisect` supplies that decision by running the app.
 
-So the system is a search, a way to build, and a way to run — meeting at two narrow interfaces:
+So the system is a search, a way to build, and a way to run, meeting at two narrow interfaces:
 
-- **Search** (`core`, `git`) — pure logic, no I/O beyond git. Fully testable offline.
-- **Preparation** (`expo-runner`, `native-runner`) — turning a commit into something installable, behind `FrameworkAdapter`.
-- **Runtime** (`revyl-runner`) — everything that touches a device, behind `MobileRuntimeRunner`.
+- **Search** (`core`, `git`), pure logic, no I/O beyond git. Fully testable offline.
+- **Preparation** (`expo-runner`, `native-runner`), turning a commit into something installable, behind `FrameworkAdapter`.
+- **Runtime** (`revyl-runner`), everything that touches a device, behind `MobileRuntimeRunner`.
 
 `core` knows about neither Expo nor Xcode nor Gradle. It knows a candidate is
 either a URL to open or an artifact to install, and that is the entire extent of
@@ -63,7 +63,7 @@ A run that doesn't cleanly pass or fail must not corrupt the search:
 |---|---|---|
 | `good` | Assertion passed | `lo = mid + 1` |
 | `bad` | Assertion failed on a build that ran | `hi = mid - 1` |
-| `inconclusive` | The run itself failed — device wouldn't boot, install failed, bundle wouldn't load | None. Retried once, then downgraded to `skipped` |
+| `inconclusive` | The run itself failed, device wouldn't boot, install failed, bundle wouldn't load | None. Retried once, then downgraded to `skipped` |
 | `skipped` | Can't be classified | Try the nearest untested commit outward from `mid`, alternating `mid-1`, `mid+1`, `mid-2`, … within `[lo, hi]` |
 
 The `bad` vs `inconclusive` distinction is what keeps the result honest. A commit that doesn't bundle is not evidence about the regression. Getting this wrong produces a confident, wrong answer, which is worse than no answer.
@@ -87,7 +87,7 @@ type BisectEvent =
   | { type: "search.failed";    message }
 ```
 
-`activeRange` is a pair of inclusive indices into the `commits` array from `search.started`. That's all the report needs to drive the collapsing rail — it never recomputes the search.
+`activeRange` is a pair of inclusive indices into the `commits` array from `search.started`. That's all the report needs to drive the collapsing rail, it never recomputes the search.
 
 Every event carries an `at` timestamp, which is what makes replay possible at arbitrary speed.
 
@@ -122,7 +122,7 @@ Step 2 is where the frameworks differ, and it is the only place they do.
 
 **Expo** takes the shortcut: one native binary, many JavaScript bundles. It installs dependencies from the lockfile (cached by lockfile hash, so unchanged deps cost nothing across commits), starts Metro on an isolated port or exports a static bundle, and hands the dev client a deep link. Seconds per candidate.
 
-That shortcut is a lie when the range contains native changes — the JavaScript would run against the wrong native modules — so the adapter's `precheck` rejects such a range up front rather than answering confidently and wrongly.
+That shortcut is a lie when the range contains native changes, the JavaScript would run against the wrong native modules, so the adapter's `precheck` rejects such a range up front rather than answering confidently and wrongly.
 
 **Xcode and Gradle** do the honest thing and compile. Minutes per candidate rather than seconds, which binary search makes tolerable: 64 commits is 6 builds, not 64. Finished artifacts are cached by SHA, so retries, resumes, and the final comparison never rebuild; builds are serialised, because two compilers contending for the same cores are slower than one after the other.
 
@@ -134,7 +134,7 @@ A dirty working tree is refused by default. With `--allow-dirty` the run proceed
 
 ## Secrets
 
-Authentication is resolved from the existing Revyl CLI session or `REVYL_API_KEY`. There is no flag that accepts a key. Key-shaped material is redacted from log output, thrown errors, `events.jsonl`, `state.json`, and the report — a run directory is safe to attach to a bug report.
+Authentication is resolved from the existing Revyl CLI session or `REVYL_API_KEY`. There is no flag that accepts a key. Key-shaped material is redacted from log output, thrown errors, `events.jsonl`, `state.json`, and the report, a run directory is safe to attach to a bug report.
 
 ## Testing without a cloud
 

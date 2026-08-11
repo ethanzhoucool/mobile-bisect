@@ -114,7 +114,7 @@ export function parseFlow(source: string, filePath: string): FlowDefinition {
 
   const expectNode = root.get('expect', true) as Node | undefined;
   if (expectNode !== undefined && !scalarString(expectNode)) {
-    fail('`expect` must be a string — the sentence the run has to satisfy.', expectNode);
+    fail('`expect` must be a string, the sentence the run has to satisfy.', expectNode);
   }
 
   const stepsNode = root.get('steps', true) as Node | undefined;
@@ -125,7 +125,7 @@ export function parseFlow(source: string, filePath: string): FlowDefinition {
     fail('`steps` must be a list.', stepsNode, 'Each list item is one step: `- label: ...`');
   }
   if (stepsNode.items.length === 0) {
-    fail('`steps` is empty — a flow needs at least one step.', stepsNode);
+    fail('`steps` is empty, a flow needs at least one step.', stepsNode);
   }
 
   const steps: FlowStep[] = stepsNode.items.map((item, i) => {
@@ -143,7 +143,7 @@ export function parseFlow(source: string, filePath: string): FlowDefinition {
       fail(
         `step ${i + 1} is missing a \`label\`.`,
         labelNode ?? node,
-        'Every step needs a short human label — it is what shows under the phone in the report.',
+        'Every step needs a short human label, it is what shows under the phone in the report.',
       );
     }
 
@@ -202,7 +202,7 @@ export async function findFlowFile(cwd: string): Promise<string | undefined> {
         .sort();
       if (names[0]) return path.join(full, names[0]);
     } catch {
-      // directory doesn't exist — keep looking
+      // directory doesn't exist, keep looking
     }
   }
   return undefined;

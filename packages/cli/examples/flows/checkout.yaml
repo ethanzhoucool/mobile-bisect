@@ -1,6 +1,6 @@
 # The Orbit Store checkout flow.
 #
-# `label` is ours — it is the human line rendered under the phone in the report
+# `label` is ours: it is the human line rendered under the phone in the report
 # and in the terminal. Everything else in a step is the Revyl-native body and is
 # passed through untouched, so you can use anything the runner understands.
 

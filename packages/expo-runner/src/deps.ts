@@ -43,7 +43,7 @@ export class MissingLockfileError extends Error {
     const names = LOCKFILES.map((l) => l.file);
     super(
       `no lockfile in ${worktreePath}. Looked for: ${names.join(', ')}. ` +
-        'mobile-bisect installs strictly from a lockfile — bisecting over unpinned dependencies ' +
+        'mobile-bisect installs strictly from a lockfile, bisecting over unpinned dependencies ' +
         'would blame the wrong commit. Commit a lockfile and re-run.',
     );
     this.name = 'MissingLockfileError';
@@ -61,7 +61,7 @@ export async function detectPackageManager(worktreePath: string): Promise<Detect
 }
 
 // ---------------------------------------------------------------------------
-// Install commands — argv arrays only, never a shell string
+// Install commands, argv arrays only, never a shell string
 // ---------------------------------------------------------------------------
 
 export interface InstallCommand {

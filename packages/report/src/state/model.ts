@@ -41,7 +41,7 @@ export interface ViewState {
   activeRange: ActiveRange;
   candidateSha?: string;
   running?: RunningState;
-  /** shas in completion order — drives the "closest known boundary" card. */
+  /** shas in completion order, drives the "closest known boundary" card. */
   completed: string[];
   culprit?: Culprit;
   culpritAt?: number;
@@ -70,7 +70,7 @@ export function emptyState(): ViewState {
 /**
  * Folds one event in place. Cheap enough to replay the whole stream every frame
  * (a 6-round run is <100 events), which is what makes scrubbing exact rather
- * than approximate — there is no separate "rewind" path that can drift.
+ * than approximate, there is no separate "rewind" path that can drift.
  */
 export function applyEvent(s: ViewState, ev: BisectEvent, at: number): void {
   s.clock = at;
@@ -146,7 +146,7 @@ export function remainingCount(s: ViewState): number {
  * The boundary the candidate is being compared against.
  *
  * Once the candidate has a verdict the useful comparison is against the
- * nearest commit that went the *other* way — that pair is the one the search
+ * nearest commit that went the *other* way, that pair is the one the search
  * is closing in on. Before then, fall back to the nearest result of any kind.
  */
 export function boundaryFor(s: ViewState, candidateSha?: string): CommitResult | undefined {

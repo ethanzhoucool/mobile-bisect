@@ -28,7 +28,7 @@ describe('redactString', () => {
     );
   });
 
-  it('leaves signed artifact URLs intact — the report needs them', () => {
+  it('leaves signed artifact URLs intact, the report needs them', () => {
     const url =
       'https://artifacts.revyl.ai/demo/8d4c2f1/run.mp4?X-Amz-Signature=abc123def456&X-Amz-Expires=900';
     expect(redactString(url)).toBe(url);

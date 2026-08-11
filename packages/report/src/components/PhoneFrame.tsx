@@ -14,7 +14,7 @@ const ASPECT = 2.06;
 /**
  * Everything inside the screen is sized off `--sw`, so the same markup stays
  * legible whether the phone is 220px wide on the search stage or 300px wide in
- * the final comparison — no scale transform, no blurry text.
+ * the final comparison, no scale transform, no blurry text.
  */
 export function PhoneFrame({ width, children, glow = 'none', flipId, className }: PhoneFrameProps) {
   const bezel = Math.round(width * 0.026);

@@ -29,7 +29,7 @@ export interface Timeline {
   /** Total scrubbable length, including the post-run comparison tail. */
   duration: number;
   culpritAt?: number;
-  /** Virtual ms at which each round starts — drawn as ticks on the scrubber. */
+  /** Virtual ms at which each round starts, drawn as ticks on the scrubber. */
   roundStarts: { round: number; at: number }[];
   startedAtIso?: string;
 }

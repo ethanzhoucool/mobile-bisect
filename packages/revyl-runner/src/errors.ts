@@ -22,7 +22,7 @@ export class RevylError extends Error {
 }
 
 /**
- * The device, the install, or the bundle load failed — we learned nothing about
+ * The device, the install, or the bundle load failed, we learned nothing about
  * the commit. The bisector retries once, then skips.
  */
 export class RevylInfraError extends RevylError {

@@ -1,7 +1,7 @@
 {
   "name": "@mobile-bisect/revyl-runner",
   "version": "0.1.0",
-  "description": "MobileRuntimeRunner backed by the Revyl CLI — drives a cloud device through a flow and returns a verdict.",
+  "description": "MobileRuntimeRunner backed by the Revyl CLI, drives a cloud device through a flow and returns a verdict.",
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

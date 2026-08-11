@@ -1,7 +1,7 @@
 /**
  * The Expo adapter: the fast path.
  *
- * Every other framework compiles per candidate. Expo does not have to — the
+ * Every other framework compiles per candidate. Expo does not have to, the
  * device is already running a dev client, so a candidate is a URL, not a build,
  * and a round costs seconds instead of minutes. `ExpoCandidateRunner` does the
  * work; this class is the contract face over it, plus the precheck that refuses
@@ -23,7 +23,7 @@ import { ExpoCandidateRunner, type ExpoCandidateRunnerOptions } from './runner.j
 
 export interface ExpoAdapterOptions extends ExpoCandidateRunnerOptions {
   /**
-   * Refuse a range whose diff touches native code. Default true — with it off
+   * Refuse a range whose diff touches native code. Default true, with it off
    * the search still runs, but a native-change commit may be misclassified.
    */
   rejectNativeChanges?: boolean;
@@ -61,7 +61,7 @@ export class ExpoAdapter implements FrameworkAdapter {
 
   /**
    * A native change invalidates the whole premise, so it is caught once up
-   * front rather than per candidate — the answer would be confidently wrong,
+   * front rather than per candidate, the answer would be confidently wrong,
    * which is worse than no answer.
    */
   async precheck(input: PrecheckInput): Promise<PrecheckResult> {

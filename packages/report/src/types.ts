@@ -3,7 +3,7 @@
  *
  * The browser bundle must not reach across package boundaries at build time
  * (the static report has to build standalone), so the shapes it consumes are
- * mirrored here. `packages/core/src/types.ts` remains the source of truth —
+ * mirrored here. `packages/core/src/types.ts` remains the source of truth -
  * this file is type-only and must stay structurally identical.
  */
 

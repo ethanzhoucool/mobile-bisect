@@ -1,7 +1,7 @@
 /**
  * The only place this package spawns a process.
  *
- * `execFile` with an argv array — never a shell string — so a flow label or an
+ * `execFile` with an argv array, never a shell string, so a flow label or an
  * assertion containing quotes, `$(…)` or `;` is inert. A non-zero exit is a
  * value, not a throw: classification decides what it means.
  */
@@ -49,7 +49,7 @@ async function isExecutable(p: string): Promise<boolean> {
 
 /**
  * Explicit path, then `REVYL_CLI`, then `revyl` on PATH, then the installer's
- * default location. Resolution is done in-process — no `which` subshell.
+ * default location. Resolution is done in-process, no `which` subshell.
  */
 export async function resolveRevylCli(cliPath?: string): Promise<string> {
   const explicit = cliPath ?? process.env.REVYL_CLI;

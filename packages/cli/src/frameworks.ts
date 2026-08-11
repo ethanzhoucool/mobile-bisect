@@ -7,7 +7,7 @@
  * rather than crash at import time.
  *
  * Detection asks every available adapter and takes the most confident answer.
- * The scores are deliberate — an Expo app that has been prebuilt has `ios/` and
+ * The scores are deliberate, an Expo app that has been prebuilt has `ios/` and
  * `android/` directories too, and swapping its JavaScript is seconds where
  * rebuilding it is minutes, so Expo outranks both native adapters on a project
  * that is genuinely both. `revyl-remote` scores below everything: building in
@@ -178,8 +178,8 @@ function score(c: DetectedFramework): number {
 /**
  * Picks the adapter for a run: the requested one, or the detected one.
  *
- * An explicit `--framework` is obeyed even when detection disagrees — the user
- * may be pointing at a project layout we do not recognise — but a failed
+ * An explicit `--framework` is obeyed even when detection disagrees, the user
+ * may be pointing at a project layout we do not recognise, but a failed
  * detection is still reported, because it usually names the real problem
  * (no shared scheme, no `:app` module).
  */

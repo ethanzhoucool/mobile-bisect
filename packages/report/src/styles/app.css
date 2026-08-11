@@ -1,11 +1,15 @@
 body {
   display: grid;
   place-items: center;
+  min-height: 100dvh;
 }
 
 .fit {
-  transform-origin: center center;
   flex: none;
+  overflow: hidden;
+}
+.fit-inner {
+  transform-origin: top left;
 }
 
 .app {
@@ -412,7 +416,7 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* The culprit and last-good subjects are the payoff — never clip them. An
+/* The culprit and last-good subjects are the payoff, never clip them. An
    ordinary mid-search candidate can still ellipsize. */
 .dc[data-verdict='culprit'] .dc-subject,
 .dc[data-verdict='lastgood'] .dc-subject {
@@ -721,16 +725,19 @@ body {
   min-height: 92px;
   flex: none;
   display: flex;
-  align-items: center;
+  /* Tabs sit on the divider they control, the way a tab strip should, rather
+     than floating above a second rule of their own. */
+  align-items: flex-end;
   justify-content: space-between;
   gap: 40px;
-  padding: 16px 28px 10px;
+  padding: 18px 28px 0;
   border-bottom: 1px solid var(--line-soft);
 }
 /* The tabs stay put while a long diagnosis scrolls under them. */
 .drawer-diagnosis {
   min-width: 0;
   max-height: 128px;
+  padding-bottom: 12px;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -743,7 +750,7 @@ body {
 }
 .drawer-tabs {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 10px;
   flex: none;
 }
@@ -755,7 +762,6 @@ body {
   position: relative;
   display: flex;
   align-items: stretch;
-  border-bottom: 1px solid var(--line);
 }
 .drawer-tab {
   position: relative;
@@ -840,9 +846,17 @@ body {
 .drawer-toggle {
   width: 38px;
   height: 38px;
-  margin-left: 8px;
+  margin: 0 0 6px 8px;
   display: grid;
   place-items: center;
+  border-radius: 8px;
+}
+.drawer-toggle:hover {
+  background: #171d25;
+}
+.drawer-toggle:focus-visible {
+  outline: 2px solid var(--active);
+  outline-offset: -2px;
 }
 .drawer-toggle span {
   width: 12px;
@@ -866,7 +880,7 @@ body {
   overscroll-behavior: contain;
 }
 
-/* Dark, unobtrusive scrollbars — the default light ones read as a rendering
+/* Dark, unobtrusive scrollbars, the default light ones read as a rendering
    bug against this canvas, and the report is often screenshotted. */
 .drawer-body,
 .drawer-diagnosis {

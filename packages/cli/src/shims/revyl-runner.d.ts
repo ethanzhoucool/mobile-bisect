@@ -12,7 +12,7 @@ import type {
 
 /**
  * Options are passed through from the CLI. Credentials are never part of this
- * object — the runner reads the Revyl CLI session or REVYL_API_KEY itself.
+ * object, the runner reads the Revyl CLI session or REVYL_API_KEY itself.
  */
 export interface RevylRunnerOptions {
   deviceModel?: string;

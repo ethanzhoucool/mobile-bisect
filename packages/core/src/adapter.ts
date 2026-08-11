@@ -2,8 +2,8 @@
  * The framework adapter contract.
  *
  * The bisection engine only ever asks one question: *make this commit runnable
- * on a device.* How that happens — swapping a JavaScript bundle, compiling a
- * Swift target, assembling a Gradle variant — is the adapter's business and
+ * on a device.* How that happens, swapping a JavaScript bundle, compiling a
+ * Swift target, assembling a Gradle variant, is the adapter's business and
  * nothing else's. `core` therefore knows about two kinds of answer and no
  * frameworks at all:
  *
@@ -27,7 +27,7 @@ export interface AdapterDetection {
   reason?: string;
   /**
    * How sure the adapter is, 0..1. Detection runs every adapter and picks the
-   * highest score, so an Expo app — which also has `ios/` once prebuilt — is
+   * highest score, so an Expo app, which also has `ios/` once prebuilt, is
    * claimed by the Expo adapter rather than by Xcode.
    */
   confidence: number;
@@ -52,9 +52,9 @@ export interface PreparedCandidate {
   sha: string;
   worktreePath: string;
   platform: Platform;
-  /** `kind: 'bundle'` — dev-client deep link or packager URL for the device to open. */
+  /** `kind: 'bundle'`, dev-client deep link or packager URL for the device to open. */
   bundleUrl?: string;
-  /** `kind: 'binary'` — local path to an installable .app.zip / .apk / .ipa. */
+  /** `kind: 'binary'`, local path to an installable .app.zip / .apk / .ipa. */
   appPath?: string;
   /** Set once the runtime has ingested `appPath`; lets a cached build skip re-upload. */
   buildId?: string;
@@ -82,7 +82,7 @@ export interface PrepareContext {
 
 /**
  * Asked once, before any device is started. This is where an adapter refuses a
- * range it cannot answer honestly — the Expo adapter rejects a diff that
+ * range it cannot answer honestly, the Expo adapter rejects a diff that
  * touches native code, because a JS swap would silently test the wrong binary.
  */
 export interface PrecheckInput {
@@ -96,7 +96,7 @@ export interface PrecheckResult {
   ok: boolean;
   /** Shown verbatim when `ok` is false. Should say what to do instead. */
   reason?: string;
-  /** Shown but not fatal, e.g. "42 of 64 commits change native code — expect slow rounds." */
+  /** Shown but not fatal, e.g. "42 of 64 commits change native code, expect slow rounds." */
   warnings?: string[];
 }
 

@@ -15,7 +15,7 @@ function readJson<T>(id: string): T | undefined {
   if (!el?.textContent) return undefined;
   try {
     const v = JSON.parse(el.textContent);
-    // Unreplaced build placeholder — treat as absent.
+    // Unreplaced build placeholder, treat as absent.
     return typeof v === 'string' && v.startsWith('__MOBILE_BISECT') ? undefined : (v as T);
   } catch {
     return undefined;

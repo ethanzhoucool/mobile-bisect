@@ -169,7 +169,7 @@ async function checkFramework(
       check: {
         label: 'framework',
         status: 'fail',
-        detail: `${chosen.adapter.displayName} — not ready`,
+        detail: `${chosen.adapter.displayName}, not ready`,
         fix: chosen.detection.reason,
       },
       name: chosen.name,
@@ -367,7 +367,7 @@ async function checkFlow(
           (head ? pc.dim(` · parsed against ${head.slice(0, 7)}`) : ''),
         fix: flow.expect
           ? undefined
-          : 'No `expect:` in the flow — pass --expect on every run, or add one.',
+          : 'No `expect:` in the flow, pass --expect on every run, or add one.',
       },
       flowPath: path.relative(repo, resolved),
       expect: flow.expect,
@@ -422,7 +422,7 @@ async function findBuild(repo: string): Promise<string | undefined> {
       const app = entries.find((e) => e.endsWith('.app'));
       if (app) return path.join(full, app);
     } catch {
-      // not there — keep looking
+      // not there, keep looking
     }
   }
   return undefined;

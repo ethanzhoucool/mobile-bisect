@@ -13,7 +13,7 @@ export async function reportCommand(opts: ReportOptions): Promise<number> {
   const events = await store.readEvents();
   if (events.length === 0) {
     throw new CliError(`Run \`${store.runId}\` has no events to report on.`, {
-      hint: 'Runs live in .mobile-bisect/runs — `mobile-bisect report <run-id>` picks a specific one.',
+      hint: 'Runs live in .mobile-bisect/runs, `mobile-bisect report <run-id>` picks a specific one.',
     });
   }
 

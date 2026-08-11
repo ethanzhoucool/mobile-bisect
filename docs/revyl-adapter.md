@@ -2,7 +2,7 @@
 
 `mobile-bisect` needs one thing from a mobile runtime: *run this flow against this
 build and tell me whether the assertion held.* That contract is
-`MobileRuntimeRunner` in `packages/core/src/types.ts` — five methods, no vendor
+`MobileRuntimeRunner` in `packages/core/src/types.ts`, five methods, no vendor
 in sight, plus an optional sixth (`uploadBuild`) for the adapters that compile a
 binary per candidate.
 
@@ -12,7 +12,7 @@ replace it.
 
 Everything below was verified against **Revyl CLI v0.1.71** by running the
 commands and recording their output. The published CLI reference documents flags
-only — it contains no response schemas and no exit-code contract — so nothing
+only, it contains no response schemas and no exit-code contract, so nothing
 here is inferred from documentation.
 
 > Revyl cloud iOS devices are simulators. We say **cloud devices**, never "real
@@ -27,7 +27,7 @@ Revyl offers two ways to drive a device.
 **`revyl test run <name>`** executes a test stored in your Revyl org. It is the
 right tool for CI. It is the wrong tool for a bisect: the flow would have to be
 uploaded and versioned server-side, it runs against a *build*, and a bisect does
-not produce a build per commit — that is the whole point.
+not produce a build per commit, that is the whole point.
 
 **`revyl device …`** provisions a raw cloud device session and issues one action
 at a time. That is what this adapter uses, because a bisect needs to:
@@ -38,8 +38,8 @@ at a time. That is what this adapter uses, because a bisect needs to:
 - decide the verdict locally, from the raw envelope, rather than accepting a
   server-side pass/fail whose failure modes it cannot inspect.
 
-`revyl dev` was considered and rejected. It is an excellent interactive loop —
-it owns Metro startup, relay creation, dev-client install and the deep link —
+`revyl dev` was considered and rejected. It is an excellent interactive loop -
+it owns Metro startup, relay creation, dev-client install and the deep link -
 but it is a long-lived foreground process bound to one worktree, and a bisect
 wants N short-lived candidates against one device. The `expo` adapter does the
 Metro half itself and hands this adapter a URL; the adapter does the device half. The
@@ -62,7 +62,7 @@ The dev client fetches that candidate's bundle over the relay. No `eas build`,
 no reinstall, no 15-minute native compile per commit. This is why an Expo
 64-commit bisect finishes in the time one native build would take.
 
-**Binary candidates.** A Swift or Kotlin commit has no such shortcut — the
+**Binary candidates.** A Swift or Kotlin commit has no such shortcut, the
 change *is* native. The adapter compiles it, and this adapter registers the
 result:
 
@@ -187,7 +187,7 @@ muddies `status` is infrastructure.
 | Step this adapter cannot express (`if`, `while`, unknown `step_type`) | `UnsupportedStepError` | `inconclusive` |
 
 `inconclusive` feeds `RetryPolicy` in core: run once more, and if it is still
-inconclusive, mark the commit `skipped` and route the search around it — exactly
+inconclusive, mark the commit `skipped` and route the search around it, exactly
 `git bisect skip` semantics.
 
 ### Two judgement calls worth arguing about
@@ -200,8 +200,8 @@ and converge on nothing. Treating it as `fail` would let one flaky tap convict
 an innocent commit.
 
 So the adapter does neither. When an action step cannot complete it stops
-issuing further actions — no point burning device minutes on a flow that has
-already diverged — and goes straight to the assertion, which is the only ground
+issuing further actions, no point burning device minutes on a flow that has
+already diverged, and goes straight to the assertion, which is the only ground
 truth it trusts. The assertion decides.
 
 This is reinforced by a measured CLI behaviour: `revyl device tap --target "a
@@ -210,8 +210,8 @@ guessed coordinate. Step exit codes are simply not a reliable signal. The
 assertion is.
 
 **A bundle that will not load is never a `fail`.** After pointing the dev client
-at a candidate, the adapter asks one negative validation — *is the screen a
-fatal loading error?* — and treats `true` as `inconclusive`. Without this, a
+at a candidate, the adapter asks one negative validation, *is the screen a
+fatal loading error?*, and treats `true` as `inconclusive`. Without this, a
 Metro hiccup on one candidate reads as "the app is broken at this commit" and
 the bisect converges on the wrong SHA with total confidence. Configure with
 `bundleErrorCheck: false | string`.
@@ -223,19 +223,19 @@ the bisect converges on the wrong SHA with total confidence. Configure with
 The adapter **never takes, constructs, stores or logs a credential.** There is
 no API-key parameter anywhere in its public API, by design.
 
-1. **Find the binary** — `resolveRevylCli()`: explicit `cliPath` →
+1. **Find the binary**, `resolveRevylCli()`: explicit `cliPath` →
    `REVYL_CLI` → `revyl` on `PATH` → `~/.revyl/bin/revyl`. Resolution is done
    in-process by probing `X_OK`; no `which` subshell.
-2. **Let the CLI authenticate itself** — it reads
+2. **Let the CLI authenticate itself**, it reads
    `~/.revyl/credentials.json` (written by `revyl auth login`) or `REVYL_API_KEY`
    from the inherited environment. The adapter passes `process.env` through
    untouched and puts nothing on a command line.
-3. **Check once, up front** — `checkRevylAuth()` runs
+3. **Check once, up front**, `checkRevylAuth()` runs
    `revyl auth status --json` and returns `{ ok, org, message }`, so a bisect
    fails in the first second rather than on commit 4 of 6.
 
-Everything leaving the package — `onLog` lines, thrown error messages,
-`RunResult.reason`, the persisted log snapshot — passes through
+Everything leaving the package, `onLog` lines, thrown error messages,
+`RunResult.reason`, the persisted log snapshot, passes through
 `redactWithEnv()` first. It scrubs credential-shaped `KEY=value` pairs,
 `Authorization` headers, secret query params, JWTs, vendor-prefixed keys
 (`rk_`, `rvl_`, `sk-`, `ghp_`, `xox…`), URL-embedded credentials, and
@@ -245,7 +245,7 @@ It deliberately **preserves AWS SigV4 query params** (`X-Amz-Credential`,
 `X-Amz-Signature`, `X-Amz-Security-Token`). Those are scoped, expiring read
 grants on the presigned artifact URLs the report renders; redacting them
 silently breaks every screenshot in the report. A test asserts that a real
-recorded report survives redaction with all of its URLs intact — this was a
+recorded report survives redaction with all of its URLs intact, this was a
 genuine bug the test caught.
 
 ---
@@ -253,7 +253,7 @@ genuine bug the test caught.
 ## 5. What artifacts are collected
 
 `collectArtifacts(runId)` returns remote URLs and locally-downloaded paths.
-Everything is best effort — `--artifact` answers *"not available for this
+Everything is best effort, `--artifact` answers *"not available for this
 session"* whenever the worker produced no such capture, and a missing artifact
 must never fail a candidate.
 
@@ -262,8 +262,8 @@ must never fail a candidate.
 | `screenshots` | Presigned S3 URLs from `device report --json`: `screenshot_before_url` and `screenshot_after_url` for every grounded action, in execution order. Falls back to locally-written frames when the report has none. |
 | `localPaths` | Run-dir-relative paths to the **downloaded copies** of those frames, plus per-step PNGs decoded from `step_output.image`, `network_requests.json.gz`, `perfetto_trace.perfetto-trace.gz`, `hardware_metrics.json.gz`, `device_logs.json`. |
 | `networkUrl` | `device report --artifact network` (prints a presigned URL). |
-| `logsUrl` | Unset — no remote URL exists for device-session logs. |
-| `videoUrl` | Unset — see below. |
+| `logsUrl` | Unset, no remote URL exists for device-session logs. |
+| `videoUrl` | Unset, see below. |
 
 `screenshots` and `localPaths` are populated **both**, not either: the remote
 URLs drive the live view while a run is in flight, and the local copies are what
@@ -271,12 +271,12 @@ the finished report renders.
 
 ### Why screenshots are downloaded eagerly
 
-The frame URLs are presigned and **expire** — the recorded report carries
+The frame URLs are presigned and **expire**, the recorded report carries
 `X-Amz-Expires=3600`, and that is a server-side policy that can tighten without
 notice. A six-round bisect that installs a build, replays a flow and retries an
 inconclusive candidate routinely runs past that window, so by the time the
-search resolves and the report renders, the frames from rounds 1 and 2 — often
-the most interesting ones, because they bracket the culprit — are already dead.
+search resolves and the report renders, the frames from rounds 1 and 2, often
+the most interesting ones, because they bracket the culprit, are already dead.
 The report's renderer inlines frames as base64 and would report *"N frame(s)
 could not be inlined … fetch failed"*.
 
@@ -294,7 +294,7 @@ search.
 
 Everything about this path is best effort and **cannot change a verdict**. A
 frame that 403s because it already expired, a step that produced no screenshot,
-a socket that resets, an environment with no global `fetch` — each is logged and
+a socket that resets, an environment with no global `fetch`, each is logged and
 skipped, and `collectArtifacts` still resolves. Artifact collection is evidence
 gathering; classification happens in `runFlow` and never consults it.
 
@@ -323,7 +323,7 @@ Measured, not assumed:
   snapshots them at the end and `collectArtifacts` only persists what it caught.
 - **`device logs` follows forever by default.** `--no-follow` is mandatory or
   the bisect hangs. (It hung ours once.)
-- **No container reset.** `resetState` maps to `device kill-app` — a cold JS
+- **No container reset.** `resetState` maps to `device kill-app`, a cold JS
   start, but not a wiped `AsyncStorage` / `UserDefaults`.
 - **`device start` does not echo device model or runtime.** The adapter reports
   what it requested; `device report` carries the authoritative values.
@@ -352,8 +352,8 @@ export interface MobileRuntimeRunner {
 }
 ```
 
-To target a different device cloud — or a local simulator, or a physical device
-farm — implement those five and hand the instance to the bisector. Nothing in
+To target a different device cloud, or a local simulator, or a physical device
+farm, implement those five and hand the instance to the bisector. Nothing in
 `@mobile-bisect/core` imports this package.
 
 Implement `uploadBuild` too if you want the `xcode` or `gradle` adapters to
@@ -368,7 +368,7 @@ What a replacement must get right:
    backend's failure modes onto it before writing anything else.
 2. **Call `onStep(index, label)` with a 1-based index, before each step runs.**
    The report renders progress live from these.
-3. **Never throw from `runFlow`** — return `{ verdict: 'inconclusive', reason }`.
+3. **Never throw from `runFlow`**, return `{ verdict: 'inconclusive', reason }`.
    `installOrLaunch` and `startSession` *should* throw; throw something carrying
    the intended verdict (see `RevylError`) so callers do not parse messages.
 4. **Make `runId` stable and resolvable.** `collectArtifacts(runId)` may be
@@ -383,6 +383,6 @@ and what `--demo` runs on. Read it before writing your own.
 For testing an adapter, follow the pattern here: record real CLI output into
 `fixtures/`, scrub it, and replay it through an injected executor
 (`RevylRunnerOptions.executor`). The 101 tests in this package never touch the
-cloud, and they exercise the error paths — including the ones where the CLI
-writes nothing to stdout and only a message to stderr — which is where
+cloud, and they exercise the error paths, including the ones where the CLI
+writes nothing to stdout and only a message to stderr, which is where
 classification bugs actually live.

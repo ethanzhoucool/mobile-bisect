@@ -1,8 +1,8 @@
 /**
  * Test-only helpers. Excluded from the build; never imported by shipped code.
  *
- * `drive()` is the reference CLI loop — nextCandidate -> session -> flow ->
- * record — so the tests exercise the same sequence the real command will.
+ * `drive()` is the reference CLI loop, nextCandidate -> session -> flow ->
+ * record, so the tests exercise the same sequence the real command will.
  */
 
 import { Bisector } from './bisect.js';
@@ -18,7 +18,7 @@ export interface DriveOptions {
   policy?: RetryPolicy;
   /** Stop after this many rounds, simulating a crash mid-run. */
   maxRounds?: number;
-  /** Called after each round completes — used to persist state between rounds. */
+  /** Called after each round completes, used to persist state between rounds. */
   afterRound?: (sha: string) => Promise<void> | void;
 }
 

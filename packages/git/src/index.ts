@@ -2,7 +2,7 @@
  * Git access for mobile-bisect.
  *
  * SAFETY CONTRACT: this package never mutates the user's working tree. No
- * checkout, reset, stash, clean, or `git bisect` is ever issued against it —
+ * checkout, reset, stash, clean, or `git bisect` is ever issued against it -
  * every candidate is materialized in a detached worktree under
  * `.mobile-bisect/worktrees/<sha>`, which is registered for cleanup on exit and
  * on SIGINT/SIGTERM. All git invocations go through `execFile`, so a ref
@@ -19,7 +19,7 @@ import type { CommitSummary } from '@mobile-bisect/core';
 
 export const WORKTREE_ROOT = path.join('.mobile-bisect', 'worktrees');
 
-/** `%H \x1f %h \x1f author \x1f authorDate \x1f subject` — subject is always last. */
+/** `%H \x1f %h \x1f author \x1f authorDate \x1f subject`, subject is always last. */
 const FMT = '%H%x1f%h%x1f%an%x1f%aI%x1f%s';
 const US = '\x1f';
 
@@ -65,7 +65,7 @@ export async function resolveRef(repo: string, ref: string): Promise<string> {
 
 /**
  * Oldest-first commit list from `good` to `bad`, INCLUDING both boundaries.
- * Index 0 is the known-good boundary, the last entry the known-bad one — which
+ * Index 0 is the known-good boundary, the last entry the known-bad one, which
  * is exactly the shape `Bisector` expects.
  */
 export async function listCandidates(
@@ -113,7 +113,7 @@ export async function assertCleanWorktree(repo: string): Promise<void> {
   const more = dirty.length > 10 ? `\n  …and ${dirty.length - 10} more` : '';
   throw new Error(
     `${repo} has uncommitted changes:\n${shown}${more}\n` +
-      'Commit or stash them yourself first — mobile-bisect will not touch your working tree.',
+      'Commit or stash them yourself first, mobile-bisect will not touch your working tree.',
   );
 }
 

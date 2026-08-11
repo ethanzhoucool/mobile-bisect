@@ -55,7 +55,7 @@ function parseEvent(line: string): BisectEvent | null {
       return value as BisectEvent;
     }
   } catch {
-    /* a trailing partial line while a run is in flight — ignore it */
+    /* a trailing partial line while a run is in flight, ignore it */
   }
   return null;
 }
@@ -243,7 +243,7 @@ interface PageOpts {
 function commandBar(view: View): string {
   const m = view.meta;
   if (!m) {
-    return `<h1>mobile-bisect</h1><p class="facts">No <code>search.started</code> event yet — nothing to summarise.</p>`;
+    return `<h1>mobile-bisect</h1><p class="facts">No <code>search.started</code> event yet, nothing to summarise.</p>`;
   }
   const facts: [string, string][] = [
     ['good', m.goodRef], ['bad', m.badRef], ['flow', m.flowName],
@@ -266,7 +266,7 @@ function rail(view: View): string {
       const cls = cellClass(state, c.sha === badSha);
       if (cls === 'good' || cls === 'bad' || cls === 'skipped') counts[cls] += 1;
       else if (cls === 'untested') counts.untested += 1;
-      const title = `${c.shortSha} — ${c.subject} (${c.author})`;
+      const title = `${c.shortSha}, ${c.subject} (${c.author})`;
       return `<i class="cell ${cls}" data-sha="${esc(c.sha)}" title="${esc(title)}"></i>`;
     })
     .join('');
@@ -356,7 +356,7 @@ ${bad ? `<p class="note">Oldest known bad: ${esc(short(bad.sha))}</p>` : ''}
 }
 
 function renderPage(view: View, o: PageOpts): string {
-  const title = view.meta ? `mobile-bisect — ${view.meta.flowName}` : 'mobile-bisect';
+  const title = view.meta ? `mobile-bisect, ${view.meta.flowName}` : 'mobile-bisect';
   const livePanel =
     o.live && !view.culprit && !view.failure
       ? `<h2>Live</h2><div class="card live"><div id="livestatus" class="mono">waiting for events…</div><div class="track"><i id="livebar"></i></div></div>`
