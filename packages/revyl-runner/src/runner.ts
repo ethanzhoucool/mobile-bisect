@@ -241,16 +241,18 @@ export class RevylRunner implements MobileRuntimeRunner {
     const buildId = input.buildId ?? uploaded ?? this.opts.buildId;
     const bundleId = input.bundleId ?? this.opts.bundleId;
     if (buildId || this.opts.appId) {
-      const res = await exec(
-        cli.deviceInstallArgs(
-          {
-            ...(buildId ? { buildId } : {}),
-            ...(this.opts.appId ? { appId: this.opts.appId } : {}),
-            ...(bundleId ? { bundleId } : {}),
-          },
-          target,
+      const res = await retryTransient(() =>
+        exec(
+          cli.deviceInstallArgs(
+            {
+              ...(buildId ? { buildId } : {}),
+              ...(this.opts.appId ? { appId: this.opts.appId } : {}),
+              ...(bundleId ? { bundleId } : {}),
+            },
+            target,
+          ),
+          { timeoutMs: 300_000 },
         ),
-        { timeoutMs: 300_000 },
       );
       if (res.code !== 0) throw infraFrom(res, 'install', 'Could not install the app on the cloud device');
     }
@@ -319,7 +321,8 @@ export class RevylRunner implements MobileRuntimeRunner {
         break;
       }
 
-      await this.captureFrame(run, runId, outcome, i + 1);
+      const frame = await this.captureFrame(run, runId, outcome, i + 1);
+      if (frame) input.onFrame?.(i + 1, frame);
       run.workflowRunId ??= outcome.workflowRunId;
 
       if (outcome.code === 0) {
@@ -340,7 +343,8 @@ export class RevylRunner implements MobileRuntimeRunner {
     if (!infraReason) {
       const res = await exec(cli.deviceValidationArgs(input.assertion, target), { timeoutMs: remaining() });
       assertionOutcome = cli.parseStepOutcome(res);
-      await this.captureFrame(run, runId, assertionOutcome, steps.length + 1);
+      const frame = await this.captureFrame(run, runId, assertionOutcome, steps.length + 1);
+      if (frame) input.onFrame?.(steps.length + 1, frame);
       run.workflowRunId ??= assertionOutcome.workflowRunId;
     }
 
@@ -568,16 +572,20 @@ export class RevylRunner implements MobileRuntimeRunner {
     runId: string,
     outcome: cli.StepOutcome,
     ordinal: number,
-  ): Promise<void> {
-    if (!outcome.imageBase64) return;
+  ): Promise<string | undefined> {
+    if (!outcome.imageBase64) return undefined;
     try {
       const dir = await this.artifactsDirFor(runId);
-      if (!dir) return;
+      if (!dir) return undefined;
       const path = join(dir, `step-${String(ordinal).padStart(2, '0')}-live.png`);
       await writeFile(path, Buffer.from(outcome.imageBase64, 'base64'));
       run.localScreenshots.push(path);
+      // Run-relative, matching `Artifacts.localPaths`, so a caller can hand it
+      // straight to the report without knowing where the run dir lives.
+      return this.toRunRelative(path);
     } catch (err) {
       this.opts.onLog?.(redactWithEnv(`could not write step frame: ${String(err)}`));
+      return undefined;
     }
   }
 
@@ -598,6 +606,34 @@ function toSession(state: SessionState): Session {
     osVersion: state.osVersion,
     ...(state.viewerUrl ? { streamUrl: state.viewerUrl } : {}),
   };
+}
+
+/**
+ * A device that has only just started can answer `/install` with a 503 while its
+ * worker is still connecting; the CLI's own message says to wait and retry. One
+ * such blip used to cost the whole build pass, which then fell back to
+ * compiling every candidate.
+ */
+export function isTransientDeviceFailure(res: CliResult): boolean {
+  if (res.code === 0) return false;
+  const text = `${res.stderr} ${res.stdout}`;
+  return /\b50[234]\b|not be fully connected|not fully connected|temporarily unavailable|connection reset|ECONNRESET|EAI_AGAIN/i.test(
+    text,
+  );
+}
+
+export async function retryTransient(
+  run: () => Promise<CliResult>,
+  opts: { attempts?: number; delayMs?: number } = {},
+): Promise<CliResult> {
+  const attempts = opts.attempts ?? 3;
+  const base = opts.delayMs ?? 3_000;
+  let res = await run();
+  for (let attempt = 1; attempt < attempts && isTransientDeviceFailure(res); attempt++) {
+    await new Promise((r) => setTimeout(r, base * attempt));
+    res = await run();
+  }
+  return res;
 }
 
 function infraFrom(res: CliResult, stage: string, summary: string): RevylError {

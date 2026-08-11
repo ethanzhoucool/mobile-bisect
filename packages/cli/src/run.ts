@@ -44,6 +44,7 @@ import {
   narrowByBuilds,
   narrowedRange,
   resolveBuildCommits,
+  type PrebuiltCommit,
 } from './prebuilt.js';
 import { CliError, messageOf } from './errors.js';
 import { findFlowFile, loadFlow } from './flow.js';
@@ -130,17 +131,20 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     await appIdFromRevylConfig(repo, opts.platform),
   );
 
-  // Before anything is compiled, test the builds this app already has. It only
-  // pays off for adapters that compile, and it needs the range to survive into
-  // `meta`, so it runs ahead of the run store.
+  // The store and the live view come up before any device work, so someone
+  // watching sees the run from its first move rather than a blank page for
+  // however long the build pass takes.
+  const store = await RunStore.create(repo, buildMeta({ opts, flow, flowPath, expect, commits, repo }).runId);
+  const ui = await openUi(opts, store, { port: opts.port, open: opts.open });
+
+  // Before anything is compiled, test the builds this app already has.
   if (opts.prebuilt && !opts.dryRun) {
-    commits = await narrowByExistingBuilds({ repo, commits, flow, expect, opts, config, appId });
+    commits = await narrowByExistingBuilds({ repo, commits, flow, expect, opts, config, appId, ui });
   }
 
-  const meta = buildMeta({ opts, flow, flowPath, expect, commits, repo });
-
-  const store = await RunStore.create(repo, meta.runId);
-  const ui = await openUi(opts, store, { port: opts.port, open: opts.open });
+  // Rebuilt after narrowing so the round count describes the search that is
+  // actually about to run.
+  const meta = { ...buildMeta({ opts, flow, flowPath, expect, commits, repo }), runId: store.runId };
 
   const runner = await buildRunner({ opts, commits, flow, config, store, appId });
   if (!opts.dryRun) await assertAppIdUsable(appId, ui);
@@ -217,6 +221,11 @@ async function assertAppIdUsable(appId: string | undefined, ui: Ui): Promise<voi
  * strictly an optimisation: any failure, any missing app id, any set of build
  * labels that name no commits, and the full range goes through unchanged.
  */
+/** How many commits could actually be to blame: the range minus its known-good base. */
+function suspects(commits: CommitSummary[]): number {
+  return Math.max(commits.length - 1, 0);
+}
+
 async function narrowByExistingBuilds(input: {
   repo: string;
   commits: CommitSummary[];
@@ -225,10 +234,11 @@ async function narrowByExistingBuilds(input: {
   opts: RunOptions;
   config: MobileBisectConfig;
   appId?: string;
+  ui: Ui;
 }): Promise<CommitSummary[]> {
-  const { repo, commits, flow, expect, opts, config, appId } = input;
+  const { repo, commits, flow, expect, opts, config, appId, ui } = input;
   const note = (line: string): void => {
-    process.stdout.write(`${pc.dim(line)}\n`);
+    ui.note(pc.dim(line));
   };
 
   let runner: MobileRuntimeRunner | undefined;
@@ -268,46 +278,69 @@ async function narrowByExistingBuilds(input: {
     }
 
     const interior = chain.length - 2;
+    // Counts are of suspects, not of the range. `commits` carries the known-good
+    // commit as its first entry, and calling that a suspect overstates the
+    // search by one everywhere it is printed.
     note(
-      `  ${interior} of ${commits.length} commits already have a build; testing those first ` +
+      `  ${interior} of ${suspects(commits)} commits already have a build; testing those first ` +
         `(install, not compile)`,
     );
+
+    const attempt = async (
+      entry: PrebuiltCommit,
+    ): Promise<{ verdict: 'good' | 'bad' | 'skip'; reason: string }> => {
+      const session = await runner!.startSession({
+        platform: opts.platform,
+        deviceModel: opts.deviceModel ?? config.deviceModel,
+        osVersion: opts.osVersion ?? config.osVersion,
+      });
+      try {
+        note(`  ${entry.commit.shortSha}  installing build ${entry.version}`);
+        await runner!.installOrLaunch({
+          sessionId: session.sessionId,
+          buildId: entry.buildId,
+          resetState: true,
+        });
+        const run = await runner!.runFlow({
+          sessionId: session.sessionId,
+          flow,
+          assertion: expect,
+          timeoutMs: opts.timeoutMs,
+        });
+        return {
+          verdict: run.verdict === 'pass' ? 'good' : run.verdict === 'fail' ? 'bad' : 'skip',
+          reason: run.reason,
+        };
+      } finally {
+        await runner!.stopSession(session.sessionId).catch(() => {});
+      }
+    };
 
     const result = await narrowByBuilds({
       chain,
       onNote: (l) => note(l),
       test: async (entry) => {
-        const session = await runner!.startSession({
-          platform: opts.platform,
-          deviceModel: opts.deviceModel ?? config.deviceModel,
-          osVersion: opts.osVersion ?? config.osVersion,
-        });
+        let outcome: { verdict: 'good' | 'bad' | 'skip'; reason: string };
         try {
-          note(`  ${entry.commit.shortSha}  installing build ${entry.version}`);
-          await runner!.installOrLaunch({
-            sessionId: session.sessionId,
-            buildId: entry.buildId,
-            resetState: true,
-          });
-          const run = await runner!.runFlow({
-            sessionId: session.sessionId,
-            flow,
-            assertion: expect,
-            timeoutMs: opts.timeoutMs,
-          });
-          const verdict = run.verdict === 'pass' ? 'good' : run.verdict === 'fail' ? 'bad' : 'skip';
-          note(`  ${entry.commit.shortSha}  ${verdict}`);
-          return verdict;
-        } finally {
-          await runner!.stopSession(session.sessionId).catch(() => {});
+          outcome = await attempt(entry);
+        } catch (e) {
+          // One device that would not cooperate is a reason to leave this
+          // commit unclassified, not to abandon a pass that was about to save
+          // several compiles. The narrowing search drops it and carries on.
+          outcome = { verdict: 'skip', reason: messageOf(e) };
         }
+        // This pass writes nothing to the run store, so an unexplained verdict
+        // here is invisible everywhere else. It also decides the range the real
+        // search runs on, which makes it the worst place to be quiet.
+        note(`  ${entry.commit.shortSha}  ${outcome.verdict}  ${outcome.reason}`);
+        return outcome.verdict;
       },
     });
 
     const narrowed = narrowedRange(commits, result.goodSha, result.badSha);
     if (narrowed.length < commits.length) {
       note(
-        `  builds narrowed ${commits.length} commits to ${narrowed.length} in ${result.tested} ` +
+        `  builds narrowed ${suspects(commits)} commits to ${suspects(narrowed)} in ${result.tested} ` +
           `install${result.tested === 1 ? '' : 's'}, with nothing compiled`,
       );
     }
@@ -658,6 +691,12 @@ class BisectRun {
           onStep: (index, label) => {
             if (active) this.bisector.step(commit.sha, index, total, label);
             else this.emit({ type: 'flow.step', at: nowIso(), sha: commit.sha, index, total, label });
+          },
+          // The screen each step left behind, so the report can show the
+          // candidate's own app while it is still running instead of falling
+          // back to an embedded device viewer.
+          onFrame: (ordinal, path) => {
+            this.emit({ type: 'flow.frame', at: nowIso(), sha: commit.sha, ordinal, path });
           },
         });
 
@@ -1080,6 +1119,7 @@ function buildMeta(input: {
     expect,
     totalCommits: commits.length,
     plannedRounds: plannedRounds(commits.length),
+    flowSteps: flow.steps.length,
   };
 }
 

@@ -9,7 +9,7 @@ import type { FetchLike } from './download.js';
 import { RevylInfraError } from './errors.js';
 import { createExecutor, resolveRevylCli, type CliExecutor, type CliResult } from './exec.js';
 import { fail, ok } from './fixtures.testutil.js';
-import { RevylRunner } from './runner.js';
+import { isTransientDeviceFailure, retryTransient, RevylRunner } from './runner.js';
 
 const SESSION = '11111111-1111-4111-8111-111111111111';
 
@@ -617,5 +617,60 @@ describe('the real executor', () => {
     const exec = createExecutor({ cliPath: '/bin/sh' });
     const res = await exec(['-c', 'sleep 5'], { timeoutMs: 150 });
     expect(res.timedOut).toBe(true);
+  });
+});
+
+describe('a device that is still coming up', () => {
+  const flaky = fail({ stderr: 'Error: worker returned 503 on /install. The device may not be fully connected yet -- wait a few seconds and retry' });
+  const installed: CliResult = { argv: [], code: 0, stdout: '', stderr: '', durationMs: 12, timedOut: false };
+
+  it('recognises the failures worth retrying', () => {
+    expect(isTransientDeviceFailure(flaky)).toBe(true);
+    expect(isTransientDeviceFailure(fail({ stderr: 'connection reset by peer' }))).toBe(true);
+  });
+
+  it('does not retry a real refusal, which would only fail slower', () => {
+    expect(isTransientDeviceFailure(fail({ stderr: 'build 1234 not found for this app' }))).toBe(false);
+    expect(isTransientDeviceFailure(installed)).toBe(false);
+  });
+
+  it('retries until the install lands', async () => {
+    let calls = 0;
+    const res = await retryTransient(
+      async () => {
+        calls += 1;
+        return calls < 3 ? flaky : installed;
+      },
+      { delayMs: 1 },
+    );
+
+    expect(calls).toBe(3);
+    expect(res.code).toBe(0);
+  });
+
+  it('gives up rather than retrying forever, and hands back the real failure', async () => {
+    let calls = 0;
+    const res = await retryTransient(
+      async () => {
+        calls += 1;
+        return flaky;
+      },
+      { attempts: 3, delayMs: 1 },
+    );
+
+    expect(calls).toBe(3);
+    expect(res.stderr).toMatch(/503/);
+  });
+
+  it('leaves a non-transient failure alone', async () => {
+    let calls = 0;
+    await retryTransient(
+      async () => {
+        calls += 1;
+        return fail({ stderr: 'build not found' });
+      },
+      { delayMs: 1 },
+    );
+    expect(calls).toBe(1);
   });
 });

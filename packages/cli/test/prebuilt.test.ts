@@ -201,11 +201,19 @@ describe('narrowByBuilds', () => {
 
   it('tests a logarithmic number of builds, not all of them', async () => {
     const chain = chainOf([0, 1, 2, 3, 4, 5, 6, 7, 8]);
+    const seen: number[] = [];
     const result = await narrowByBuilds({
       chain,
-      test: async (e) => (e.commit.index >= 5 ? 'bad' : 'good'),
+      test: async (e) => {
+        seen.push(e.commit.index);
+        return e.commit.index >= 5 ? 'bad' : 'good';
+      },
     });
-    expect(result.tested).toBeLessThanOrEqual(3);
+
+    // Seven commits in the interior, three of them looked at.
+    expect(new Set(seen).size).toBeLessThanOrEqual(3);
+    // Each `bad` is run twice to confirm it, so runs are bounded by 2 per probe.
+    expect(result.tested).toBeLessThanOrEqual(6);
     expect(result.goodSha).toBe(commits[4]!.sha);
     expect(result.badSha).toBe(commits[5]!.sha);
   });
@@ -232,6 +240,58 @@ describe('narrowByBuilds', () => {
     expect(result.goodSha).toBe(commits[0]!.sha);
     expect(result.badSha).toBe(commits[8]!.sha);
   });
+
+  describe('a `bad` has to reproduce before it moves the range', () => {
+    it('ignores a failure that does not happen twice', async () => {
+      const notes: string[] = [];
+      const seen: number[] = [];
+      const result = await narrowByBuilds({
+        chain: chainOf([0, 2, 4, 6, 8]),
+        // 4 fails once, from a device that came up slowly, and passes on the retry.
+        test: async (e) => {
+          seen.push(e.commit.index);
+          if (e.commit.index === 4) return seen.filter((i) => i === 4).length === 1 ? 'bad' : 'good';
+          return e.commit.index >= 7 ? 'bad' : 'good';
+        },
+        onNote: (l) => notes.push(l),
+      });
+
+      expect(notes.join()).toMatch(/did not fail twice/);
+      // The real regression is at 7. Trusting 4's first answer would have
+      // narrowed to [0,4] and put the culprit outside the search entirely.
+      expect(result.goodSha).toBe(commits[6]!.sha);
+      expect(result.badSha).toBe(commits[8]!.sha);
+    });
+
+    it('keeps a failure that reproduces', async () => {
+      const result = await narrowByBuilds({
+        chain: chainOf([0, 2, 4, 6, 8]),
+        test: async (e) => (e.commit.index >= 5 ? 'bad' : 'good'),
+      });
+      expect(result.goodSha).toBe(commits[4]!.sha);
+      expect(result.badSha).toBe(commits[6]!.sha);
+    });
+
+    it('counts the confirming run, so the install count stays honest', async () => {
+      const result = await narrowByBuilds({
+        chain: chainOf([0, 4, 8]),
+        test: async () => 'bad',
+      });
+      expect(result.tested).toBe(2);
+    });
+
+    it('does not re-run a good, which no flaky device produces by accident', async () => {
+      let runs = 0;
+      await narrowByBuilds({
+        chain: chainOf([0, 4, 8]),
+        test: async () => {
+          runs += 1;
+          return 'good';
+        },
+      });
+      expect(runs).toBe(1);
+    });
+  });
 });
 
 describe('appIdFromRevylConfig', () => {
@@ -254,11 +314,11 @@ describe('appIdFromRevylConfig', () => {
         '    app_id: 11111111-1111-1111-1111-111111111111',
         '    platforms:',
         '        ios:',
-        '            app_id: 449ae04e-24b3-45a6-b125-c628092c441e',
+        '            app_id: 7c2f9a10-3e4b-4d51-9f80-2a6c5b1d4e33',
         '',
       ].join('\n'),
     );
-    expect(await appIdFromRevylConfig(dir, 'ios')).toBe('449ae04e-24b3-45a6-b125-c628092c441e');
+    expect(await appIdFromRevylConfig(dir, 'ios')).toBe('7c2f9a10-3e4b-4d51-9f80-2a6c5b1d4e33');
   });
 
   it('falls back to the shared id when the platform has none', async () => {
@@ -272,7 +332,7 @@ describe('appIdFromRevylConfig', () => {
         'build:',
         '    platforms:',
         '        android:',
-        '            app_id: 4f1630f5-7259-41cd-8022-66276b53d6eb',
+        '            app_id: 2b9d70c4-8a15-4f62-b703-6c1e9d5a8f47',
         '',
       ].join('\n'),
     );
@@ -286,11 +346,11 @@ describe('appIdFromRevylConfig', () => {
         'build:',
         '    platforms:',
         '        ios-dev:',
-        '            app_id: 449ae04e-24b3-45a6-b125-c628092c441e',
+        '            app_id: 7c2f9a10-3e4b-4d51-9f80-2a6c5b1d4e33',
         '',
       ].join('\n'),
     );
-    expect(await appIdFromRevylConfig(dir, 'ios')).toBe('449ae04e-24b3-45a6-b125-c628092c441e');
+    expect(await appIdFromRevylConfig(dir, 'ios')).toBe('7c2f9a10-3e4b-4d51-9f80-2a6c5b1d4e33');
   });
 
   it('is undefined when there is no config at all', async () => {

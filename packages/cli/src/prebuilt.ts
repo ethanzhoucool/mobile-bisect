@@ -189,8 +189,9 @@ export async function narrowByBuilds(input: NarrowInput): Promise<NarrowResult> 
   while (lo <= hi) {
     const mid = Math.floor((lo + hi) / 2);
     const entry = chain[mid]!;
-    const verdict = await test(entry);
-    tested += 1;
+    const verdict = await confirmedVerdict(entry, test, onNote, () => {
+      tested += 1;
+    });
 
     if (verdict === 'skip') {
       onNote?.(`  ${entry.commit.shortSha} could not be classified from its build, skipping it`);
@@ -210,6 +211,41 @@ export async function narrowByBuilds(input: NarrowInput): Promise<NarrowResult> 
   }
 
   return { goodSha: good.commit.sha, badSha: bad.commit.sha, tested };
+}
+
+/**
+ * Runs one entry, and makes it prove a `bad` before that verdict is allowed to
+ * move the range.
+ *
+ * A wrong `bad` is the one failure this pass cannot recover from. `skip` drops
+ * an entry and `good` only moves the floor, but `bad` pulls the ceiling down,
+ * and if it does so past the real culprit the search that follows cannot find
+ * it: it ends by confidently blaming a commit, with evidence that looks no
+ * different from a correct answer. Devices produce false failures for reasons
+ * that have nothing to do with the commit, and a real regression reproduces
+ * where a slow device does not.
+ *
+ * Only `bad` is confirmed. Passing means the app launched and was driven all
+ * the way to the state the assertion describes, which is not something a flaky
+ * device does by accident.
+ */
+async function confirmedVerdict(
+  entry: PrebuiltCommit,
+  test: NarrowInput['test'],
+  onNote: NarrowInput['onNote'],
+  countRun: () => void,
+): Promise<'good' | 'bad' | 'skip'> {
+  countRun();
+  const first = await test(entry);
+  if (first !== 'bad') return first;
+
+  onNote?.(`  ${entry.commit.shortSha} looks bad, confirming that before it narrows the range`);
+  countRun();
+  const second = await test(entry);
+  if (second === 'bad') return 'bad';
+
+  onNote?.(`  ${entry.commit.shortSha} did not fail twice, so it is not used to narrow anything`);
+  return 'skip';
 }
 
 /**
