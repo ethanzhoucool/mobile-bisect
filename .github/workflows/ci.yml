@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: ${{ matrix.os }} · node ${{ matrix.node }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        node: [20, 22]
+
+    steps:
+      # The dry-run step below bisects this repo, so the checkout needs history.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 20
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      # The git package builds real repositories and bisects them, so it needs
+      # an identity to commit with.
+      - name: Give git an identity
+        run: |
+          git config --global user.name "CI"
+          git config --global user.email "ci@example.com"
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm run typecheck
+      - run: npm test
+
+      # The one end-to-end path that needs no cloud device: a real commit range,
+      # real worktrees, real report, fake runner.
+      - name: Dry-run against this repo's own history
+        run: |
+          node packages/cli/dist/cli.js run \
+            --good HEAD~8 --bad HEAD \
+            --flow examples/flows/checkout.yaml \
+            --expect "the order confirmation screen appears" \
+            --dry-run --no-ui --port 0
