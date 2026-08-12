@@ -119,7 +119,10 @@ export function BisectReport({
     return () => es.close();
   }, [live, sseUrl]);
 
-  const timeline = useMemo(() => buildTimeline(events), [events]);
+  // Most of a run is a cloud build with nothing on screen. Off by default, so
+  // the scrubber still measures real elapsed time unless someone asks not to.
+  const [skipIdle, setSkipIdle] = useState(false);
+  const timeline = useMemo(() => buildTimeline(events, { skipIdle }), [events, skipIdle]);
   const clock = useClock({
     duration: timeline.duration,
     autoplay: autoplay && !live,
@@ -379,6 +382,8 @@ export function BisectReport({
               live={live}
               following={following}
               onFollow={() => setFollowing((f) => !f)}
+              skipIdle={skipIdle}
+              onSkipIdle={() => setSkipIdle((v) => !v)}
             />
           )}
         </div>

@@ -9,12 +9,16 @@ export function ReplayControls({
   live,
   following,
   onFollow,
+  skipIdle,
+  onSkipIdle,
 }: {
   clock: Clock;
   timeline: Timeline;
   live: boolean;
   following?: boolean;
   onFollow?: () => void;
+  skipIdle?: boolean;
+  onSkipIdle?: () => void;
 }) {
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -86,6 +90,18 @@ export function ReplayControls({
         )}
         <i className="ctl-head" style={{ left: `${pct}%` }} />
       </div>
+
+      {onSkipIdle && (
+        <button
+          type="button"
+          className="ctl-skip mono"
+          onClick={onSkipIdle}
+          data-on={skipIdle ? 'true' : undefined}
+          title="Collapse the stretches spent compiling and booting a device"
+        >
+          skip waits
+        </button>
+      )}
 
       <div className="ctl-speeds mono">
         {SPEEDS.map((s) => (

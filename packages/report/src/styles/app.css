@@ -1248,6 +1248,27 @@ body {
  * and booting a device, and a still dashed circle there looks the same as a
  * capture that did not happen, so this one turns.
  */
+/* Sits with the speed buttons; reads as off until it is on. */
+.ctl-skip {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ctl-skip:hover {
+  color: var(--text);
+}
+.ctl-skip[data-on='true'] {
+  color: var(--blue);
+  border-color: rgba(110, 168, 254, 0.5);
+  background: rgba(110, 168, 254, 0.1);
+}
+
 .phone-empty-spin {
   width: 26px;
   height: 26px;
@@ -1262,7 +1283,28 @@ body {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .phone-empty-spin {
+  /* Sits with the speed buttons; reads as off until it is on. */
+.ctl-skip {
+  flex: none;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ctl-skip:hover {
+  color: var(--text);
+}
+.ctl-skip[data-on='true'] {
+  color: var(--blue);
+  border-color: rgba(110, 168, 254, 0.5);
+  background: rgba(110, 168, 254, 0.1);
+}
+
+.phone-empty-spin {
     animation-duration: 2400ms;
   }
 }

@@ -24,6 +24,27 @@ export interface TimelineMark {
   ev: BisectEvent;
 }
 
+/**
+ * Dead air, and what it is worth watching.
+ *
+ * Most of a round is spent compiling the candidate and booting a device: about
+ * 75 seconds of every 130, with nothing on screen. Played at full length that
+ * is most of a recording.
+ *
+ * Which stretches are dead is decided by what ends them, not by how long they
+ * are. A duration threshold cannot separate "compiling for 50 seconds" from
+ * "the agent is working through a step for 20", and collapsing the second
+ * would throw away the part worth watching. The waits that end when a
+ * candidate finally starts running, or when its first step lands, are the ones
+ * with nothing in them.
+ */
+export const IDLE_KEEP_MS = 800;
+
+export interface BuildTimelineOptions {
+  /** Collapse the stretches where nothing is happening. */
+  skipIdle?: boolean;
+}
+
 export interface Timeline {
   marks: TimelineMark[];
   /** Total scrubbable length, including the post-run comparison tail. */
@@ -34,7 +55,35 @@ export interface Timeline {
   startedAtIso?: string;
 }
 
-export function buildTimeline(events: BisectEvent[]): Timeline {
+/**
+ * Rewrites event times so the waiting between them is short.
+ *
+ * Only the spacing changes; the order and the events themselves do not, so
+ * every consumer of a mark keeps working and the compression is invisible
+ * beyond the scrubber running shorter.
+ */
+function endsAWait(ev: BisectEvent): boolean {
+  // The device came up, or the app finally answered.
+  return ev.type === 'commit.running' || (ev.type === 'flow.step' && ev.index === 1);
+}
+
+function collapseIdle(marks: TimelineMark[]): TimelineMark[] {
+  const out: TimelineMark[] = [];
+  let prevRaw = 0;
+  let shift = 0;
+  for (const m of marks) {
+    const gap = m.at - prevRaw;
+    if (endsAWait(m.ev) && gap > IDLE_KEEP_MS) shift += gap - IDLE_KEEP_MS;
+    prevRaw = m.at;
+    out.push({ at: Math.max(0, m.at - shift), ev: m.ev });
+  }
+  return out;
+}
+
+export function buildTimeline(
+  events: BisectEvent[],
+  options: BuildTimelineOptions = {},
+): Timeline {
   const marks: TimelineMark[] = [];
   const roundStarts: { round: number; at: number }[] = [];
   let base = 0;
@@ -50,14 +99,18 @@ export function buildTimeline(events: BisectEvent[]): Timeline {
     }
     const at = Math.max(0, t - base);
     marks.push({ at, ev });
-    if (ev.type === 'round.started') roundStarts.push({ round: ev.round, at });
-    if (ev.type === 'culprit.found') culpritAt = at;
   });
 
-  const last = marks.length ? marks[marks.length - 1].at : 0;
+  const timed = options.skipIdle ? collapseIdle(marks) : marks;
+  for (const m of timed) {
+    if (m.ev.type === 'round.started') roundStarts.push({ round: m.ev.round, at: m.at });
+    if (m.ev.type === 'culprit.found') culpritAt = m.at;
+  }
+
+  const last = timed.length ? timed[timed.length - 1].at : 0;
   const tail = culpritAt !== undefined ? culpritAt + REVEAL_MS + COMPARE_LOOP_MS : last;
   return {
-    marks,
+    marks: timed,
     duration: Math.max(last, tail) + 400,
     culpritAt,
     roundStarts,
