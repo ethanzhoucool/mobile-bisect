@@ -5,7 +5,10 @@ import { REDACTED, redactError, redactString, redactValue, redactWithEnv } from 
 
 describe('redactString', () => {
   it.each([
-    ['REVYL_API_KEY=notarealkey_abcdefghijklmnopqrstuvwxyz', 'notarealkey_abcdefghijklmnopqrstuvwxyz'],
+    // Deliberately not shaped like any vendor's real key prefix: a fixture that
+    // trips secret scanners blocks every push and teaches contributors to ignore
+    // the warning.
+    ['REVYL_API_KEY=notarealkey_abcdefghijklmnopqrst', 'notarealkey_abcdefghijklmnopqrst'],
     ['api_key: sk-proj-0123456789abcdefghij', 'sk-proj-0123456789abcdefghij'],
     ['{"access_token": "0123456789abcdefghij"}', '0123456789abcdefghij'],
     ['Authorization: Bearer abcdefghijklmnop', 'abcdefghijklmnop'],

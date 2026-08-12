@@ -20,8 +20,12 @@ const SIGV4_PARAM = /^X-Amz-/i;
 
 const PATTERNS: Array<[RegExp, (...m: string[]) => string]> = [
   // KEY=value / "key": "value" for credential-shaped names.
+  //
+  // Bare `token` is listed as well as the qualified forms. It used to be
+  // covered only by accident, when the value carried a recognised vendor
+  // prefix, so `token=<anything else>` came through in the clear.
   [
-    /\b([A-Za-z0-9_.-]*(?:api[_-]?key|secret|password|passphrase|private[_-]?key|auth[_-]?token|access[_-]?token|refresh[_-]?token|session[_-]?token|credential)[A-Za-z0-9_.-]*"?\s*[:=]\s*"?)([^\s"',;}]{4,})/gi,
+    /\b([A-Za-z0-9_.-]*(?:api[_-]?key|secret|password|passphrase|private[_-]?key|auth[_-]?token|access[_-]?token|refresh[_-]?token|session[_-]?token|token|credential)[A-Za-z0-9_.-]*"?\s*[:=]\s*"?)([^\s"',;}]{4,})/gi,
     (m: string, lead: string) => (SIGV4_PARAM.test(lead) ? m : `${lead}${REDACTED}`),
   ],
   // Authorization: Bearer|Token|Basic <credential>
