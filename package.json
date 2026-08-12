@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "tsc -b packages/core packages/git packages/expo-runner packages/native-runner packages/revyl-runner packages/cli"
+    "typecheck": "tsc -b packages/core packages/git packages/expo-runner packages/native-runner packages/revyl-runner packages/cli && npm run typecheck --workspace @mobile-bisect/report"
   },
   "devDependencies": {
     "typescript": "^5.6.3",
