@@ -1,7 +1,7 @@
 {
   "name": "mobile-bisect",
   "version": "0.1.0",
-  "description": "git bisect for visual mobile regressions: binary-search an Expo app's history on cloud devices until one commit is to blame",
+  "description": "git bisect for visual mobile regressions: binary-search a Swift, Kotlin, React Native or Expo app's history on cloud devices until one commit is to blame",
   "license": "MIT",
   "type": "module",
   "bin": {
@@ -23,6 +23,12 @@
   "keywords": [
     "expo",
     "react-native",
+    "ios",
+    "android",
+    "xcode",
+    "gradle",
+    "swift",
+    "kotlin",
     "bisect",
     "regression",
     "e2e",

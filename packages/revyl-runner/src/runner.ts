@@ -588,15 +588,6 @@ export class RevylRunner implements MobileRuntimeRunner {
       return undefined;
     }
   }
-
-  private async artifactUrl(
-    exec: CliExecutor,
-    sessionId: string,
-    artifact: 'perf' | 'network' | 'trace',
-  ): Promise<string | undefined> {
-    const res = await exec(cli.deviceReportArgs({ sessionId, artifact }), { timeoutMs: 120_000 });
-    return res.code === 0 ? cli.parseArtifactUrl(res) : undefined;
-  }
 }
 
 function toSession(state: SessionState): Session {

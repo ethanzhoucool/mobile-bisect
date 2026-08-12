@@ -503,7 +503,7 @@ RUN OPTIONS
   --scheme <name>           Xcode scheme to build (xcode only)
   --variant <name>          Gradle variant to assemble (gradle only, default debug)
   --project-dir <dir>       Subdirectory holding the native project, e.g. ios
-  --no-prebuilt            Skip the pass that tests existing Revyl builds first
+  --no-prebuilt             Skip the pass that tests existing Revyl builds first
   --concurrency <n>         Candidates evaluated in parallel (default 1, max 8)
   --max-candidates <n>      Refuse to start beyond this many commits (default 64)
   --timeout <seconds>       Per-candidate flow timeout (default 600)
@@ -559,7 +559,7 @@ the command to resume.
   --scheme <name>           Xcode scheme to build (xcode only)
   --variant <name>          Gradle variant to assemble (gradle only, default debug)
   --project-dir <dir>       Subdirectory holding the native project, e.g. ios
-  --no-prebuilt            Skip the pass that tests existing Revyl builds first
+  --no-prebuilt             Skip the pass that tests existing Revyl builds first
   --concurrency <n>         Candidates evaluated in parallel (default 1, max 8)
   --max-candidates <n>      Refuse to start beyond this many commits (default 64)
   --timeout <seconds>       Per-candidate flow timeout (default 600)
