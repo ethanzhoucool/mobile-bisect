@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { createReadStream, existsSync, statSync, watch } from 'node:fs';
 import { open } from 'node:fs/promises';
-import { extname, join, normalize, resolve } from 'node:path';
+import { extname, join, normalize, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
 import { parseLines, readEvents, resolveRun } from './loadEvents.js';
 import { renderHtml } from './template.js';
@@ -89,8 +89,19 @@ class Tail {
     }
 }
 function serveFile(root, rel, res) {
-    const target = resolve(root, normalize(rel).replace(/^(\.\.[/\\])+/, ''));
-    if (!target.startsWith(root) || !existsSync(target) || statSync(target).isDirectory())
+    let decoded;
+    try {
+        decoded = decodeURIComponent(rel);
+    }
+    catch {
+        return false; // a malformed escape is not a path we have
+    }
+    const target = resolve(root, normalize(decoded).replace(/^(\.\.[/\\])+/, ''));
+    // `startsWith(root)` alone would also accept a sibling directory whose name
+    // begins with the run dir's, so the separator is part of the check.
+    if (target !== root && !target.startsWith(root + sep))
+        return false;
+    if (!existsSync(target) || statSync(target).isDirectory())
         return false;
     res.writeHead(200, {
         'content-type': MIME[extname(target).toLowerCase()] ?? 'application/octet-stream',
@@ -148,9 +159,12 @@ export async function serve(opts) {
         });
     });
     const port = opts.port ?? 4713;
+    // Loopback only. The run directory holds screenshots, logs and network traces
+    // of the app under test, and the default bind would hand all of it to anyone
+    // on the same network for as long as the search runs.
     await new Promise((ok, fail) => {
         server.once('error', fail);
-        server.listen(port, ok);
+        server.listen(port, '127.0.0.1', ok);
     });
     const actual = server.address().port;
     const url = `http://localhost:${actual}`;
