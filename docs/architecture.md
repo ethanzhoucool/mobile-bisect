@@ -13,10 +13,9 @@ mobile-bisect/
     revyl-runner/   cloud device execution, build upload, flow replay, artifact collection
     report/         live web interface and static HTML report
   examples/
-    orbit-store/    Expo demo app with a real 64-commit history
     flows/          example flow definitions
   fixtures/
-    demo-runs/      recorded event streams for interface development
+    demo-runs/      synthetic event streams for interface development
   docs/
 ```
 

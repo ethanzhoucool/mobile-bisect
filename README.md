@@ -7,7 +7,7 @@ You know the build is broken. You don't know which commit broke it. `mobile-bise
 Swift, Kotlin, React Native, Expo, the search is the same; only the way a commit becomes runnable differs.
 
 ```bash
-npx mobile-bisect \
+mobile-bisect run \
   --good v1.4.0 \
   --bad HEAD \
   --flow flows/checkout.yaml \
@@ -17,16 +17,20 @@ npx mobile-bisect \
 ```
 FIRST BAD COMMIT
 
-  8d29fbc  Refactor order response handling
-  Dan Oketch · 64 commits searched · 6 runs · 4m 21s
+  8d4c2f1  Refactor order response handling
+  dan.oketch · 64 commits searched · 6 runs · 1m 26s
 
   POST /orders returned 200 in both builds.
   Navigation stopped after the response parser returned undefined.
 
-  report → .mobile-bisect/runs/20260810T210613-checkout-flow/report.html
+  report → .mobile-bisect/runs/orbit-checkout-demo/report.html
 ```
 
-That is the included demo, not a mock-up, `examples/orbit-store` really does have those 64 commits, and `8d29fbc` really is the one that breaks checkout.
+That transcript comes from `fixtures/demo-runs/orbit-checkout.jsonl`, a scripted
+64-commit run used to develop the interface. `mobile-bisect replay` plays it back
+through the real terminal UI and the real report, so you can see the shape of an
+answer before you own a cloud device. It is a script, not a recording: the shas
+and the authors in it are made up.
 
 ---
 
@@ -76,20 +80,41 @@ Native builds are cached by commit SHA, so a retry, a resume, and the final last
 
 ## Install
 
-```bash
-npx mobile-bisect init      # checks git, detects your framework, verifies Revyl auth
-npx mobile-bisect run --good <sha> --bad <sha> --flow <file>
-```
-
-`init` walks you through authentication and writes a `mobile-bisect.config.ts`. Try it against the included demo first:
+Not on npm yet, so it installs from source:
 
 ```bash
-cd examples/orbit-store
-npx mobile-bisect run --good v1.4.0 --bad HEAD --flow ../flows/checkout.yaml \
-  --expect "the order confirmation screen appears" --dry-run
+git clone https://github.com/ethanzhoucool/mobile-bisect
+cd mobile-bisect
+npm install
+npm run build
+npm link --workspace mobile-bisect   # optional, puts `mobile-bisect` on your PATH
 ```
 
-`--dry-run` executes the full search offline with a simulated runtime, so you can see the whole thing work before connecting a device.
+Without the link, every command below is `node <repo>/packages/cli/dist/cli.js …`.
+
+Two ways to see it work before a device is involved. Replay the scripted demo run:
+
+```bash
+mobile-bisect replay fixtures/demo-runs/orbit-checkout.jsonl
+```
+
+Or search your own repo's history against a simulated runtime:
+
+```bash
+cd ~/your-app
+mobile-bisect run --good HEAD~20 --bad HEAD --dry-run \
+  --expect "the order confirmation screen appears"
+```
+
+`--dry-run` executes the full search offline: real commits, real worktrees, real
+report, with a fake runner standing in for the device. Then set up for real:
+
+```bash
+mobile-bisect init      # checks git, detects your framework, verifies Revyl auth
+mobile-bisect run --good <sha> --bad <sha> --flow <file>
+```
+
+`init` walks you through authentication and writes a `mobile-bisect.config.ts`.
 
 ## The flow file
 
@@ -148,22 +173,32 @@ Not yet:
 
 A range containing native changes is no longer a dead end, it is a reason to use `--framework xcode` or `--framework gradle` instead of the Expo fast path. The Expo adapter refuses such a range up front rather than swapping JavaScript underneath the wrong binary and answering confidently wrong.
 
-## The demo app
+## The demo run
 
-`examples/orbit-store` is a small Expo commerce app with a real 64-commit history and one deliberately planted regression: a response-parsing refactor moves the order payload under a `data` envelope, but the navigation call still reads the old path. The order request succeeds with a 200 in both builds. Only one of them reaches the confirmation screen.
+`fixtures/demo-runs/orbit-checkout.jsonl` is a 64-commit search that resolves in
+6 rounds, over a scripted history for a commerce app called Orbit Store. The
+planted regression is the one worth planting: a response-parsing refactor moves
+the order payload under a `data` envelope while the navigation call still reads
+the old path. The order request succeeds with a 200 either way. Only one build
+reaches the confirmation screen.
 
-It's the honest version of the problem, the failure is invisible to your network layer and obvious on the screen.
+That is the honest version of the problem, the failure is invisible to your
+network layer and obvious on the screen.
 
-The boundaries are real commits, not fixtures:
+```bash
+mobile-bisect replay fixtures/demo-runs/orbit-checkout.jsonl
+```
 
-| | Commit | Subject |
-|---|---|---|
-| `v1.4.0` (good) | `59bafb4` | Release v1.4.0 |
-| last good | `dc7eedf` | Preserve checkout navigation |
-| **first bad** | `8d29fbc` | Refactor order response handling |
-| `HEAD` (bad) | `fccf6af` | Update README screenshots |
+The event stream is scripted, not captured, so treat it as a picture of the
+output and not as evidence about a real app. What is real is everything it
+drives: the terminal UI, the live view and the report are the same code a cloud
+run uses. For the search itself against real history, `--dry-run` on your own
+repo is the honest test, it enumerates your commits and checks them out for
+real.
 
-`examples/orbit-store/scripts/verify-bisect.sh` proves it independently with a plain `git bisect run`, it lands on index 41 in 6 steps without involving this tool at all.
+The Expo app this run was written against is not in this repo. It carries its
+own 64-commit history, which is the whole point of it, and a repo cannot hold
+another repo's history without a submodule.
 
 ## Safety
 
