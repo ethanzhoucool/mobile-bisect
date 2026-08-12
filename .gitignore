@@ -19,3 +19,6 @@ packages/report/.screenshots/
 .DS_Store
 .env
 .env.*
+
+# Rendered demo output, regenerate with `npm run render:fixture -w @mobile-bisect/report`
+packages/report/out/
