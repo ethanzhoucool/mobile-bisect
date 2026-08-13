@@ -2,8 +2,12 @@
  * Drive the live view from a recorded event stream.
  *
  * Useful for demos and for working on the UI without burning device minutes:
- * the terminal view and (with --port) the browser see exactly what a real run
+ * the terminal view, the browser and the report see exactly what a real run
  * would produce, paced by the timestamps in the fixture.
+ *
+ * A recording carries the `report.ready` of the machine it was recorded on. That
+ * path means nothing here, so it is dropped on the way through and replaced with
+ * one for the report this replay actually renders.
  */
 
 import { readFile } from 'node:fs/promises';
@@ -13,6 +17,7 @@ import { RunStore, type BisectEvent } from '@mobile-bisect/core';
 import { loadReport } from '../adapters.js';
 import type { ReplayOptions } from '../args.js';
 import { CliError } from '../errors.js';
+import { ensureToolDirIgnored } from '../run.js';
 import { LiveSink } from '../ui/live.js';
 import { JsonSink, PlainSink } from '../ui/plain.js';
 import { fanout, type EventSink } from '../ui/sink.js';
@@ -44,12 +49,13 @@ export async function replayCommand(opts: ReplayOptions): Promise<number> {
   else sinks.push(new PlainSink());
   const ui = fanout(sinks);
 
-  // Only materialise a run directory when someone wants to watch in a browser.
-  let store: RunStore | undefined;
+  const cwd = path.resolve(opts.cwd);
+  await ensureToolDirIgnored(cwd);
+  const store = await RunStore.create(cwd, `replay-${stamp()}`);
+  const report = await loadReport();
+
   let closeServer: (() => Promise<void>) | undefined;
   if (opts.port !== undefined && !opts.json) {
-    store = await RunStore.create(path.resolve(opts.cwd), `replay-${stamp()}`);
-    const report = await loadReport();
     const server = await report.serve({ runDir: store.dir, port: opts.port, open: opts.open });
     closeServer = () => server.close();
     ui.note(pc.dim(`  live view  ${pc.cyan(server.url)}  (replay of ${opts.fixture})`));
@@ -58,6 +64,7 @@ export async function replayCommand(opts: ReplayOptions): Promise<number> {
   try {
     let previous: number | undefined;
     for (const event of events) {
+      if (event.type === 'report.ready') continue; // another machine's file
       const at = Date.parse(event.at);
       if (previous !== undefined && Number.isFinite(at)) {
         const gap = Math.min(MAX_GAP_MS, Math.max(0, at - previous)) / opts.speed;
@@ -65,8 +72,23 @@ export async function replayCommand(opts: ReplayOptions): Promise<number> {
       }
       if (Number.isFinite(at)) previous = at;
       ui.handle(event);
-      await store?.append(event);
+      await store.append(event);
     }
+
+    // A recording has no artifacts on this disk, so nothing is inlined and no
+    // remote media is fetched; what renders is the search itself.
+    const outPath = await report.renderReport({
+      runDir: store.dir,
+      allowRemoteMedia: false,
+      inlineAssets: false,
+    });
+    const ready: BisectEvent = {
+      type: 'report.ready',
+      at: new Date().toISOString(),
+      reportPath: path.relative(cwd, outPath) || outPath,
+    };
+    ui.handle(ready);
+    await store.append(ready);
   } finally {
     await ui.close();
     await closeServer?.();
