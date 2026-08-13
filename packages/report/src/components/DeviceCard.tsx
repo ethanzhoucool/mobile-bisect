@@ -2,6 +2,7 @@ import { createContext, useContext, useState } from 'react';
 import { PhoneFrame } from './PhoneFrame.tsx';
 import { OrbitStore, screenForStep, type OrbitScreen } from './OrbitStore.tsx';
 import { frameIndexFor } from '../lib/frames.ts';
+import { pendingKind } from '../state/model.ts';
 import type { CommitState } from '../types.ts';
 
 export interface MediaConfig {
@@ -276,9 +277,9 @@ export function DeviceCard({
   const idx = done ? total : (step?.index ?? 0);
   const screen = screenForStep(done ? total : (step?.index ?? 0), verdict);
   const glow = state === 'running' ? 'blue' : state === 'good' ? 'green' : state === 'bad' ? 'red' : 'none';
-  // `scheduled` is the adapter compiling the candidate; `running` is a device
-  // that has started but not yet answered a step.
-  const pending = done ? undefined : state === 'scheduled' ? 'building' : state === 'running' ? 'starting' : undefined;
+  // `scheduled` is the adapter compiling the candidate; `starting` only holds
+  // until the flow reports its first step. See `pendingKind`.
+  const pending = pendingKind(state, step?.index, done);
 
   return (
     <div

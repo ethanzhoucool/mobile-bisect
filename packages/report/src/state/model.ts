@@ -89,7 +89,11 @@ export function applyEvent(s: ViewState, ev: BisectEvent, at: number): void {
       s.commits = ev.commits;
       s.indexOf = new Map(ev.commits.map((c) => [c.sha, c.index]));
       s.states = ev.commits.map(() => 'untested');
-      s.activeRange = [0, Math.max(0, ev.commits.length - 1)];
+      // The interior the search will test, which is what every later
+      // `round.started` and `range.narrowed` carries. Starting from the whole
+      // list instead counted the known-good base as still in play, and the
+      // header read "64 of 63 remain" until the first round narrowed it.
+      s.activeRange = [1, Math.max(1, ev.commits.length - 2)];
       break;
     }
     case 'round.started': {
@@ -150,11 +154,37 @@ export function applyEvent(s: ViewState, ev: BisectEvent, at: number): void {
   }
 }
 
-/** Number of commits still in play. */
+/**
+ * What the phone is waiting on, when it has no frame to show.
+ *
+ * Only true before the flow has reported a step: most of a round is the adapter
+ * compiling and the device booting, and "no frame captured" there would read as
+ * a failed capture rather than "not yet". Once a step has come back the device
+ * has plainly started, so a missing frame is a missing frame and the phone says
+ * so instead of claiming a state the run has already left.
+ */
+export function pendingKind(
+  state: CommitState,
+  stepIndex: number | undefined,
+  done: boolean,
+): 'building' | 'starting' | undefined {
+  if (done) return undefined;
+  if (state === 'scheduled') return 'building';
+  if (state === 'running' && (stepIndex ?? 0) === 0) return 'starting';
+  return undefined;
+}
+
+/**
+ * How many commits could still be to blame.
+ *
+ * One more than the untested interior: whichever way the interior resolves,
+ * the commit just past its top is still a possible culprit, which is why a
+ * search that has narrowed to `[i, i]` has two answers left, not one.
+ */
 export function remainingCount(s: ViewState): number {
   if (!s.commits.length) return 0;
   const [a, b] = s.activeRange;
-  return Math.max(0, b - a + 1);
+  return Math.min(Math.max(0, b - a + 2), Math.max(s.commits.length - 1, 0));
 }
 
 /**
