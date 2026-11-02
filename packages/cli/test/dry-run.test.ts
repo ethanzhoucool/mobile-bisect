@@ -2,7 +2,7 @@
  * The primary integration test: a full 64-commit bisect, offline, no cloud.
  */
 
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { git, latestRunDir, makeRepo, readEvents, runCli } from './helpers.js';
@@ -232,5 +232,52 @@ describe('mobile-bisect run --dry-run', () => {
       expect((await git(dir, ['worktree', 'list'])).split('\n')).toHaveLength(1);
     },
     180_000,
+  );
+});
+
+describe('mobile-bisect run --dry-run across a merge', () => {
+  it(
+    'searches first-parent history and says how to search inside a merged branch',
+    async () => {
+      const { dir } = await makeRepo({ commits: 4 });
+      const commitFile = async (file: string, subject: string): Promise<string> => {
+        await writeFile(path.join(dir, file), `${subject}\n`);
+        await git(dir, ['add', '-A']);
+        await git(dir, ['commit', '-qm', subject]);
+        return git(dir, ['rev-parse', 'HEAD']);
+      };
+
+      const base = await git(dir, ['rev-parse', 'HEAD']);
+      await git(dir, ['checkout', '-qb', 'feature']);
+      const f1 = await commitFile('feature.txt', 'feature 1');
+      const f2 = await commitFile('feature.txt', 'feature 2');
+      await git(dir, ['checkout', '-q', 'main']);
+      await commitFile('main.txt', 'main 1');
+      await git(dir, ['merge', '-q', '--no-ff', '--no-edit', '-m', 'Merge feature', 'feature']);
+      const merge = await git(dir, ['rev-parse', 'HEAD']);
+      await commitFile('after.txt', 'after the merge');
+
+      const result = await runCli(
+        ['run', '--good', 'v1.0', '--bad', 'HEAD', '--dry-run', '--culprit', merge, '--no-ui', '--port', '0'],
+        { cwd: dir },
+      );
+      expect(result.code).toBe(0);
+      expect(result.stdout).toContain('following first parents: 2 commits that arrived through a merge');
+
+      const events = await readEvents(await latestRunDir(dir));
+      const started = events[0] as { commits: { sha: string }[] };
+      const searched = started.commits.map((c) => c.sha);
+      expect(searched).not.toContain(f1);
+      expect(searched).not.toContain(f2);
+      expect(searched).toContain(merge);
+
+      const found = events.find((e) => e.type === 'culprit.found') as { badSha: string; diagnosis?: string };
+      expect(found.badSha).toBe(merge);
+      expect(result.stdout).toContain(`${merge.slice(0, 7)} is a merge`);
+      expect(result.stdout).toContain(
+        `mobile-bisect run --good ${base.slice(0, 7)} --bad ${f2.slice(0, 7)}`,
+      );
+    },
+    120_000,
   );
 });

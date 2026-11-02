@@ -41,6 +41,8 @@ The CLI wires them together; the report observes.
 
 Candidates come from `git rev-list --ancestry-path <good>..<bad>`, oldest first, boundaries included. Index `0` is the known-good boundary and index `n-1` is the known-bad boundary, so the search only ever examines the interior `[1, n-2]`.
 
+The list is a single parent chain, each commit a parent of the next. Binary search needs that: a regression can only flip the verdict from good to bad once along a chain, but the ancestry path of a range with a merge holds both sides of it, and a commit on one side carries nothing from the other. Walking back from `<bad>`, a merge is followed through its first parent unless only the other parent leads back to `<good>`. Commits that arrive through a merge are left off the chain and represented by the merge, and the CLI says how many, and how to search the merged branch when the merge is the culprit.
+
 ```
 lo = 1, hi = n-2
 while lo <= hi:

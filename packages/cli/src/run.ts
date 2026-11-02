@@ -119,7 +119,8 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     });
   }
 
-  let commits = await enumerateCommits(repo, opts, config);
+  const range = await enumerateCommits(repo, opts, config);
+  let commits = range.commits;
 
   // One app id for the whole run. A flow's `appId` is a display name as often
   // as an id, and the API takes only a UUID, so a UUID from anywhere wins.
@@ -136,6 +137,14 @@ export async function runCommand(opts: RunOptions): Promise<number> {
   // however long the build pass takes.
   const store = await RunStore.create(repo, buildMeta({ opts, flow, flowPath, expect, commits, repo }).runId);
   const ui = await openUi(opts, store, { port: opts.port, open: opts.open });
+  if (range.offPath > 0) {
+    ui.note(
+      pc.dim(
+        `  following first parents: ${range.offPath} commit${range.offPath === 1 ? '' : 's'} that ` +
+          `arrived through a merge ${range.offPath === 1 ? 'is' : 'are'} tested as part of that merge`,
+      ),
+    );
+  }
 
   // Before anything is compiled, test the builds this app already has.
   if (opts.prebuilt && !opts.dryRun) {
@@ -952,6 +961,7 @@ class BisectRun {
   private async finish(): Promise<number> {
     await this.persistState();
     if (!this.bisector.culprit) return 1; // the Bisector already emitted search.failed
+    await this.noteMergeCulprit(this.bisector.culprit.badSha);
 
     await this.appendQueue;
     const report = await loadReport();
@@ -971,6 +981,34 @@ class BisectRun {
     }
     await this.appendQueue;
     return 0;
+  }
+
+  /**
+   * The search follows first parents, so a regression that came in with a
+   * merged branch is pinned on the merge. That is true but not yet useful: say
+   * how to search the branch itself.
+   */
+  private async noteMergeCulprit(sha: string): Promise<void> {
+    try {
+      const parents = await git.parentsOf(this.repo, sha);
+      if (parents.length < 2) return;
+      const [mainline, merged] = parents as [string, string];
+      const base = await git.mergeBase(this.repo, mainline, merged);
+      this.ui.note(
+        pc.dim(
+          `  ${sha.slice(0, 7)} is a merge: the regression arrived with the branch it merged, ` +
+            'or with how the two were combined.',
+        ),
+      );
+      if (base) {
+        this.ui.note(
+          pc.dim('  If that branch fails on its own, search inside it with the same flow:\n') +
+            `    ${pc.cyan(`mobile-bisect run --good ${base.slice(0, 7)} --bad ${merged.slice(0, 7)}`)}`,
+        );
+      }
+    } catch {
+      /* a hint, never a reason to fail a finished search */
+    }
   }
 
   private async persistState(): Promise<void> {
@@ -1061,16 +1099,17 @@ async function enumerateCommits(
   repo: string,
   opts: RunOptions,
   config: MobileBisectConfig,
-): Promise<CommitSummary[]> {
-  let commits: CommitSummary[];
+): Promise<git.CandidateRange> {
+  let range: git.CandidateRange;
   try {
-    commits = await git.listCandidates(repo, opts.good, opts.bad);
+    range = await git.listCandidateRange(repo, opts.good, opts.bad);
   } catch (e) {
     throw new CliError(messageOf(e), {
       hint: 'Check that both refs exist and that --good is an ancestor of --bad.',
     });
   }
 
+  const { commits } = range;
   if (commits.length < 2) {
     throw new CliError(`There is nothing to bisect between \`${opts.good}\` and \`${opts.bad}\`.`, {
       hint: 'Pick a --good ref that is further back in history.',
@@ -1086,7 +1125,7 @@ async function enumerateCommits(
       },
     );
   }
-  return commits;
+  return range;
 }
 
 function buildMeta(input: {
