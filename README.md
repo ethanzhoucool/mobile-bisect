@@ -78,6 +78,8 @@ Expo wins on a project that is both, a prebuilt Expo app has an `ios/` directory
 
 Native builds are cached by commit SHA, so a retry, a resume, and the final last-good/first-bad comparison never recompile. See [`docs/framework-adapters.md`](docs/framework-adapters.md).
 
+Verdicts can be reused too. With `--reuse-verdicts`, a run first looks at earlier runs that used the same flow, assertion, device and build settings, and uses the good and bad commits they already found to narrow the range before anything is built. Re-running a search, moving `--bad` forward, or starting over instead of resuming then only pays for commits nobody has classified yet. Skipped commits, and commits earlier runs disagree about, are run again.
+
 ## Install
 
 Not on npm yet, so it installs from source:
