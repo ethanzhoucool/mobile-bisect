@@ -34,6 +34,9 @@ export interface BisectorOptions {
 
 const RESOLVED = new Set(['good', 'bad', 'skipped']);
 
+/** Past this many, an unresolved search lists the first few and counts the rest. */
+const MAX_LISTED_SUSPECTS = 10;
+
 export class Bisector {
   private readonly commits: CommitSummary[];
   private readonly meta: BisectMeta;
@@ -178,9 +181,7 @@ export class Bisector {
 
     const mid = this.pick();
     if (mid === null) {
-      this.fail(
-        `every commit in range [${this.lo}, ${this.hi}] was skipped; cannot narrow further`,
-      );
+      this.failSkippedOut();
       return null;
     }
 
@@ -297,9 +298,7 @@ export class Bisector {
     if (this.isComplete) return;
     if (this.lo <= this.hi) {
       // Range still has room, but it may be entirely skipped.
-      if (this.pick() === null) {
-        this.fail(`every commit in range [${this.lo}, ${this.hi}] was skipped; cannot narrow further`);
-      }
+      if (this.pick() === null) this.failSkippedOut();
       return;
     }
     const bad = this.commits[this.lo];
@@ -317,6 +316,29 @@ export class Bisector {
       badSha: bad.sha,
       ...(this.diagnosis !== undefined ? { diagnosis: this.diagnosis } : {}),
     });
+  }
+
+  /**
+   * Every commit left in [lo, hi] was skipped, so the search cannot narrow
+   * further. That is not the same as knowing nothing: commits[lo - 1] passed
+   * (or is the good boundary) and commits[hi + 1] failed (or is the bad
+   * boundary), so the first bad commit is one of the skipped commits or
+   * commits[hi + 1] itself. Name them, the way `git bisect` does, so the
+   * search ends with a short list to check by hand rather than a shrug.
+   */
+  private failSkippedOut(): void {
+    // lo >= 1 and hi <= n-2 whenever this is reached, so both neighbours exist.
+    const lastGood = this.commits[this.lo - 1]!;
+    const firstBad = this.commits[this.hi + 1]!;
+    const suspects = this.commits.slice(this.lo, this.hi + 2);
+    const shown = suspects.slice(0, MAX_LISTED_SUSPECTS).map((c) => short(c.sha));
+    const more = suspects.length - shown.length;
+    this.fail(
+      `every commit in range [${this.lo}, ${this.hi}] was skipped; cannot narrow further. ` +
+        `The first bad commit is one of these ${suspects.length}: ${shown.join(', ')}` +
+        `${more > 0 ? `, and ${more} more` : ''} ` +
+        `(last good ${short(lastGood.sha)}, first known bad ${short(firstBad.sha)}).`,
+    );
   }
 
   private fail(message: string): void {
@@ -350,7 +372,7 @@ export class Bisector {
       const mid = this.pick();
       if (mid === null) {
         this.roundNo = Object.keys(this.results).length;
-        this.fail(`every commit in range [${this.lo}, ${this.hi}] was skipped; cannot narrow further`);
+        this.failSkippedOut();
         return;
       }
       const c = this.commits[mid]!;
