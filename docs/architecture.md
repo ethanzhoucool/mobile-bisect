@@ -69,7 +69,7 @@ A run that doesn't cleanly pass or fail must not corrupt the search:
 
 The `bad` vs `inconclusive` distinction is what keeps the result honest. A commit that doesn't bundle is not evidence about the regression. Getting this wrong produces a confident, wrong answer, which is worse than no answer.
 
-If every commit in the active range skips, the search ends unresolved and says so.
+If every commit in the active range skips, the search ends unresolved and says so. It still names what it knows, as `git bisect` does: the first bad commit is one of the skipped commits or the known-bad commit right after them, and `search.failed` lists those, between the last good commit and the first known bad one.
 
 ## Event stream
 
