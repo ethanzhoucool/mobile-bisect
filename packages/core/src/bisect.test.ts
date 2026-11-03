@@ -187,8 +187,66 @@ describe('Bisector, skip', () => {
     const [failed] = pick(events, 'search.failed');
     expect(failed?.message).toMatch(/\[1, 3\]/);
     expect(failed?.message).toMatch(/skipped/);
+    // the three skipped commits, or the bad boundary itself
+    const s = commits.map((c) => c.shortSha);
+    expect(failed?.message).toContain(`one of these 4: ${s[1]}, ${s[2]}, ${s[3]}, ${s[4]}`);
+    expect(failed?.message).toContain(`last good ${s[0]}, first known bad ${s[4]}`);
     expect(b.isComplete).toBe(true);
     expect(b.culprit).toBeUndefined();
+  });
+
+  it('names the suspects when skips block the search partway through', () => {
+    // interior [1, 4]; commit 2 cannot be built, and 3 is where it broke
+    const commits = makeCommits(6);
+    const { events, emit } = recorder();
+    const b = new Bisector({ commits, meta: makeMeta(6), emit });
+    const tested: number[] = [];
+    for (;;) {
+      const c = b.nextCandidate();
+      if (!c) break;
+      tested.push(c.index);
+      b.record(result(c, c.index === 2 ? 'skipped' : c.index >= 3 ? 'bad' : 'good'));
+    }
+    expect(tested).toEqual([2, 1, 3]);
+    expect(b.culprit).toBeUndefined();
+
+    const [failed] = pick(events, 'search.failed');
+    const s = commits.map((c) => c.shortSha);
+    expect(failed?.message).toContain(`one of these 2: ${s[2]}, ${s[3]}`);
+    expect(failed?.message).toContain(`last good ${s[1]}, first known bad ${s[3]}`);
+  });
+
+  it('lists the first ten suspects and counts the rest', () => {
+    const commits = makeCommits(20);
+    const { events, emit } = recorder();
+    const b = new Bisector({ commits, meta: makeMeta(20), emit });
+    for (;;) {
+      const c = b.nextCandidate();
+      if (!c) break;
+      b.record(result(c, 'skipped'));
+    }
+    const [failed] = pick(events, 'search.failed');
+    const s = commits.map((c) => c.shortSha);
+    expect(failed?.message).toContain(`one of these 19: ${s.slice(1, 11).join(', ')}, and 9 more`);
+    expect(failed?.message).not.toContain(s[11]!);
+    expect(failed?.message).toContain(`first known bad ${s[19]}`);
+  });
+
+  it('names the same suspects when a skipped-out run is resumed', () => {
+    const commits = makeCommits(6);
+    const { events, emit } = recorder();
+    const b = new Bisector({ commits, meta: makeMeta(6), emit });
+    for (;;) {
+      const c = b.nextCandidate();
+      if (!c) break;
+      b.record(result(c, c.index === 2 ? 'skipped' : c.index >= 3 ? 'bad' : 'good'));
+    }
+    const live = pick(events, 'search.failed')[0]!.message;
+
+    const replayed = recorder();
+    const resumed = Bisector.resume({ ...b.state, finishedAt: undefined }, replayed.emit);
+    expect(resumed.isComplete).toBe(true);
+    expect(pick(replayed.events, 'search.failed')[0]!.message).toBe(live);
   });
 });
 

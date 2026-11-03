@@ -21,6 +21,8 @@ export const WORKTREE_ROOT = path.join('.mobile-bisect', 'worktrees');
 
 /** `%H \x1f %h \x1f author \x1f authorDate \x1f subject`, subject is always last. */
 const FMT = '%H%x1f%h%x1f%an%x1f%aI%x1f%s';
+/** `FMT` with the space-separated parent shas (`%P`) as the second field. */
+const FMT_WITH_PARENTS = '%H%x1f%P%x1f%h%x1f%an%x1f%aI%x1f%s';
 const US = '\x1f';
 
 export class GitError extends Error {
@@ -63,6 +65,16 @@ export async function resolveRef(repo: string, ref: string): Promise<string> {
   }
 }
 
+export interface CandidateRange {
+  /** Oldest-first, both boundaries included; see `listCandidates`. */
+  commits: CommitSummary[];
+  /**
+   * Commits between the boundaries that are not on the searched path. They
+   * arrived through a merge, and that merge commit stands in for them.
+   */
+  offPath: number;
+}
+
 /**
  * Oldest-first commit list from `good` to `bad`, INCLUDING both boundaries.
  * Index 0 is the known-good boundary, the last entry the known-bad one, which
@@ -73,6 +85,31 @@ export async function listCandidates(
   goodRef: string,
   badRef: string,
 ): Promise<CommitSummary[]> {
+  return (await listCandidateRange(repo, goodRef, badRef)).commits;
+}
+
+/**
+ * `listCandidates`, plus how many commits the path leaves out.
+ *
+ * Binary search is only sound over a list in which every commit contains the
+ * one before it: then "has the regression" can flip from good to bad once, and
+ * halving finds where. `git rev-list --ancestry-path good..bad` is not such a
+ * list once the range holds a merge, because it interleaves the two sides, and
+ * a commit on one side carries nothing from the other. Search that and a bug
+ * introduced on main tests good on a feature-branch commit sorted after it,
+ * and the search confidently blames a later commit.
+ *
+ * So the path is a single parent chain from `bad` back to `good`: at a merge
+ * it follows the first parent, the branch that was merged into, unless only
+ * the other side leads back to `good`. Each commit is then a parent of the
+ * next, and a regression that arrived with a merged branch is pinned on the
+ * merge that brought it in.
+ */
+export async function listCandidateRange(
+  repo: string,
+  goodRef: string,
+  badRef: string,
+): Promise<CandidateRange> {
   const good = await resolveRef(repo, goodRef);
   const bad = await resolveRef(repo, badRef);
   if (good === bad) {
@@ -85,23 +122,67 @@ export async function listCandidates(
     );
   }
 
+  // Every commit that is both a descendant of good and an ancestor of bad,
+  // with its parents, in no order we rely on.
   const out = await git(repo, [
     'rev-list',
     '--ancestry-path',
-    '--reverse',
-    `--format=${FMT}`,
+    `--format=${FMT_WITH_PARENTS}`,
     `${good}..${bad}`,
   ]);
 
-  const commits: CommitSummary[] = [await commitMeta(repo, good)];
+  const onAncestryPath = new Map<string, { summary: CommitSummary; parents: string[] }>();
   for (const line of out.split('\n')) {
     if (!line || line.startsWith('commit ')) continue; // `--format` prints a header per commit
-    commits.push(parseSummary(line));
+    const [sha, parents, ...rest] = line.split(US);
+    if (!sha) continue;
+    onAncestryPath.set(sha, {
+      summary: parseSummary([sha, ...rest].join(US)),
+      parents: (parents ?? '').split(' ').filter(Boolean),
+    });
   }
-  if (commits[commits.length - 1]?.sha !== bad) {
-    throw new Error(`rev-list did not reach ${badRef} (${bad.slice(0, 7)}) along the ancestry path`);
+
+  // Walk back from bad. Every commit on the ancestry path has at least one
+  // parent that is either good or also on it, so the walk always reaches good.
+  const newestFirst: CommitSummary[] = [];
+  for (let sha = bad; sha !== good; ) {
+    const entry = onAncestryPath.get(sha);
+    if (!entry) {
+      throw new Error(`rev-list did not reach ${badRef} (${bad.slice(0, 7)}) along the ancestry path`);
+    }
+    newestFirst.push(entry.summary);
+    const next = entry.parents.find((p) => p === good || onAncestryPath.has(p));
+    if (!next) {
+      throw new Error(
+        `${entry.summary.shortSha} has no parent leading back to ${goodRef} (${good.slice(0, 7)})`,
+      );
+    }
+    sha = next;
   }
-  return commits.map((c, index) => ({ ...c, index }));
+
+  const commits = [await commitMeta(repo, good), ...newestFirst.reverse()];
+  return {
+    commits: commits.map((c, index) => ({ ...c, index })),
+    offPath: onAncestryPath.size - newestFirst.length,
+  };
+}
+
+/** Parent shas of `sha`, first parent first. More than one means a merge. */
+export async function parentsOf(repo: string, sha: string): Promise<string[]> {
+  const full = await resolveRef(repo, sha);
+  const out = await git(repo, ['rev-list', '--parents', '-n', '1', full]);
+  return out.trim().split(/\s+/).slice(1);
+}
+
+/** The best common ancestor of two commits, or undefined if they share none. */
+export async function mergeBase(repo: string, a: string, b: string): Promise<string | undefined> {
+  const [left, right] = [await resolveRef(repo, a), await resolveRef(repo, b)];
+  try {
+    const sha = (await git(repo, ['merge-base', left, right])).trim();
+    return /^[0-9a-f]{40}$/.test(sha) ? sha : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Throws if tracked files are modified. Untracked files are harmless and ignored. */
@@ -187,14 +268,20 @@ export async function cleanupAllWorktrees(repo: string): Promise<void> {
   uninstallHandlersIfIdle();
 }
 
-/** Unified diff for a single commit, optionally narrowed to `paths`. */
+/**
+ * Unified diff for a single commit, optionally narrowed to `paths`.
+ *
+ * A merge is diffed against its first parent, which is what it brought into
+ * the branch the search walks. Plain `git show` prints a combined diff for a
+ * merge instead, and for a clean merge that is empty.
+ */
 export async function showDiff(
   repo: string,
   sha: string,
   opts?: { paths?: string[] },
 ): Promise<string> {
   const full = await resolveRef(repo, sha);
-  const args = ['show', '--no-color', '--patch', '--format=%H %s%n', full];
+  const args = ['show', '--no-color', '--patch', '-m', '--first-parent', '--format=%H %s%n', full];
   if (opts?.paths?.length) args.push('--', ...opts.paths);
   return git(repo, args);
 }

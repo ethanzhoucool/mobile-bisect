@@ -42,7 +42,7 @@ Git already has the binary search. What's missing is something that can look at 
 
 ## How it works
 
-1. `git rev-list --ancestry-path` enumerates the commits between your good and bad refs.
+1. `git rev-list --ancestry-path` enumerates the commits between your good and bad refs, as one parent chain: at a merge it follows the branch that was merged into, so a regression that arrived with a merged branch is pinned on that merge.
 2. For each candidate the tool picks, it checks that commit out into a **temporary worktree**, your working tree is never touched.
 3. A **framework adapter** makes that commit runnable. Expo swaps the JavaScript bundle into one reusable dev client; Xcode and Gradle compile the commit for real; `revyl-remote` compiles it on a cloud runner instead of on your machine.
 4. It replays your flow on a Revyl cloud device and evaluates your plain-language assertion.
