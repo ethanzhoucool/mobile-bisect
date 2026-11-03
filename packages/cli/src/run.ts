@@ -52,6 +52,13 @@ import { redactDeep } from './redact.js';
 import { LiveSink } from './ui/live.js';
 import { JsonSink, PlainSink } from './ui/plain.js';
 import { fanout, type EventSink } from './ui/sink.js';
+import {
+  loadKnownVerdicts,
+  narrowByKnown,
+  reusedResult,
+  verdictKey,
+  type KnownVerdict,
+} from './verdicts.js';
 
 const TOOL_DIR = '.mobile-bisect';
 
@@ -74,6 +81,11 @@ interface RunSidecar {
   /** Which adapter prepared the candidates, so `resume` uses the same one. */
   framework?: FrameworkName;
   command: string;
+  /**
+   * Hash of everything a verdict depends on besides the commit. A later run
+   * with `--reuse-verdicts` takes this run's good/bad results when it matches.
+   */
+  verdictKey?: string;
 }
 
 interface Ui {
@@ -153,7 +165,7 @@ export async function runCommand(opts: RunOptions): Promise<number> {
 
   // Rebuilt after narrowing so the round count describes the search that is
   // actually about to run.
-  const meta = { ...buildMeta({ opts, flow, flowPath, expect, commits, repo }), runId: store.runId };
+  let meta = { ...buildMeta({ opts, flow, flowPath, expect, commits, repo }), runId: store.runId };
 
   const runner = await buildRunner({ opts, commits, flow, config, store, appId });
   if (!opts.dryRun) await assertAppIdUsable(appId, ui);
@@ -177,12 +189,32 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     buildId: config.build?.buildId,
     framework: framework.name,
     command: meta.command,
+    verdictKey: verdictKey({
+      flow,
+      expect,
+      platform: opts.platform,
+      deviceModel: opts.deviceModel ?? config.deviceModel,
+      osVersion: opts.osVersion ?? config.osVersion,
+      framework: framework.name,
+      appId,
+      buildId: config.build?.buildId,
+      build: withFlagOverrides(config, opts).build,
+      dryRun: opts.dryRun,
+      culpritSha: runner.culpritSha,
+      flakySha: runner.flakySha,
+    }),
   };
   await writeFile(
     path.join(store.dir, 'run.json'),
     `${JSON.stringify(redactDeep(sidecar), null, 2)}\n`,
     'utf8',
   );
+
+  let known = new Map<string, KnownVerdict>();
+  if (opts.reuseVerdicts) {
+    ({ commits, known } = await narrowByEarlierRuns({ repo, store, key: sidecar.verdictKey!, commits, ui }));
+    meta = { ...meta, totalCommits: commits.length, plannedRounds: plannedRounds(commits.length) };
+  }
 
   const engine = new BisectRun({
     repo,
@@ -192,8 +224,66 @@ export async function runCommand(opts: RunOptions): Promise<number> {
     runner: runner.runner,
     adapter: framework.adapter,
     sidecar,
+    known,
   });
   return engine.start(commits, meta);
+}
+
+/**
+ * `--reuse-verdicts`: narrows the range with what earlier runs of the same
+ * flow already established, before a single candidate is run.
+ *
+ * Like the prebuilt pass, this is purely an optimisation: no matching run, no
+ * verdict inside the range, or verdicts that contradict each other, and the
+ * range goes through unchanged.
+ */
+async function narrowByEarlierRuns(input: {
+  repo: string;
+  store: RunStore;
+  key: string;
+  commits: CommitSummary[];
+  ui: Ui;
+}): Promise<{ commits: CommitSummary[]; known: Map<string, KnownVerdict> }> {
+  const { repo, store, key, commits, ui } = input;
+  const note = (line: string): void => ui.note(pc.dim(line));
+  const unchanged = { commits, known: new Map<string, KnownVerdict>() };
+
+  const found = await loadKnownVerdicts({ repo, key, excludeRunId: store.runId, commits }).catch(
+    () => undefined,
+  );
+  if (!found || found.runs === 0) {
+    note('  no earlier run used this flow, assertion, device and build, so there is nothing to reuse');
+    return unchanged;
+  }
+  if (found.conflicting > 0) {
+    note(
+      `  earlier runs disagree about ${found.conflicting} commit${found.conflicting === 1 ? '' : 's'}; ` +
+        'those are not reused',
+    );
+  }
+  if (found.bySha.size === 0) {
+    note('  earlier runs of this flow classified nothing in this range');
+    return unchanged;
+  }
+
+  const narrowed = narrowByKnown(commits, found.bySha);
+  if (!narrowed.consistent) {
+    note(
+      '  earlier verdicts for this range contradict each other (a good commit after a bad one), ' +
+        'so none are reused',
+    );
+    return unchanged;
+  }
+  const runs = `${found.runs} earlier run${found.runs === 1 ? '' : 's'}`;
+  if (narrowed.commits.length < commits.length) {
+    note(
+      `  verdicts from ${runs} narrowed ${suspects(commits)} commits to ${suspects(narrowed.commits)}, ` +
+        'with nothing run',
+    );
+  } else {
+    note(`  verdicts from ${runs} do not narrow this range`);
+  }
+  return { commits: narrowed.commits, known: found.bySha };
 }
 
 /**
@@ -477,6 +567,17 @@ export async function resumeCommand(opts: ResumeOptions): Promise<number> {
 
   const flow = opts.flow ? await loadFlow(path.resolve(repo, opts.flow)) : sidecar.flow;
   const resumed: RunSidecar = { ...sidecar, flow, dryRun: opts.dryRun ?? sidecar.dryRun };
+  if (sidecar.verdictKey && (opts.flow || resumed.dryRun !== sidecar.dryRun)) {
+    // The key describes the flow and runner this run started with, and the
+    // verdicts recorded from here on answer a different question, so the run
+    // stops offering its verdicts to later runs.
+    const unkeyed: RunSidecar = { ...sidecar, verdictKey: undefined };
+    await writeFile(
+      path.join(store.dir, 'run.json'),
+      `${JSON.stringify(redactDeep(unkeyed), null, 2)}\n`,
+      'utf8',
+    );
+  }
   const { config } = await loadConfig(repo);
   const runner = await buildRunner({
     opts: { ...toRunOptions(opts, resumed), cwd: opts.cwd } as RunOptions,
@@ -541,6 +642,8 @@ class BisectRun {
   private readonly adapter: FrameworkAdapter;
   private readonly sidecar: RunSidecar;
   private readonly policy = new RetryPolicy({ maxAttempts: 2 });
+  /** `--reuse-verdicts`: earlier runs' results, which the boundaries may now have. */
+  private readonly known: Map<string, KnownVerdict>;
 
   private bisector!: Bisector;
   private appendQueue: Promise<void> = Promise.resolve();
@@ -568,7 +671,9 @@ class BisectRun {
     runner: MobileRuntimeRunner;
     adapter: FrameworkAdapter;
     sidecar: RunSidecar;
+    known?: Map<string, KnownVerdict>;
   }) {
+    this.known = deps.known ?? new Map();
     this.repo = deps.repo;
     this.store = deps.store;
     this.ui = deps.ui;
@@ -600,8 +705,8 @@ class BisectRun {
     // to be ready before that happens.
     if (commits.length === 2) {
       this.injectedDiagnosis = await this.diagnosisFor(
-        boundaryResult(commits[0]!, 'good', this.sidecar.expect),
-        boundaryResult(commits[1]!, 'bad', this.sidecar.expect),
+        this.boundary(commits[0]!, 'good'),
+        this.boundary(commits[1]!, 'bad'),
       );
     }
     this.bisector = new Bisector({ commits, meta, emit: this.emit });
@@ -945,10 +1050,16 @@ class BisectRun {
     const commit = this.bisector.state.commits[index];
     if (!commit) return undefined;
     if (commit.sha === pending.sha) return pending;
-    return (
-      this.bisector.state.results[commit.sha] ??
-      boundaryResult(commit, boundary, this.sidecar.expect)
-    );
+    return this.bisector.state.results[commit.sha] ?? this.boundary(commit, boundary);
+  }
+
+  /**
+   * A boundary's result: an earlier run's verdict when the range was narrowed
+   * onto one, otherwise the synthetic "taken on trust" one.
+   */
+  private boundary(commit: CommitSummary, state: 'good' | 'bad'): CommitResult {
+    const known = this.known.get(commit.sha);
+    return known ? reusedResult(known) : boundaryResult(commit, state, this.sidecar.expect);
   }
 
   private async diagnosisFor(
