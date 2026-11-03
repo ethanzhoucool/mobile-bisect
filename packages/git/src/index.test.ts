@@ -6,6 +6,7 @@ import * as path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { promisify } from 'node:util';
 
+import { Bisector, type CommitSummary } from '@mobile-bisect/core';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import {
@@ -14,7 +15,10 @@ import {
   commitMeta,
   createWorktree,
   isGitRepo,
+  listCandidateRange,
   listCandidates,
+  mergeBase,
+  parentsOf,
   redactSecrets,
   resolveRef,
   showDiff,
@@ -129,7 +133,151 @@ describe('listCandidates', () => {
     const commits = await listCandidates(dir, shas[0]!, shas[1]!);
     expect(commits.map((c) => c.index)).toEqual([0, 1]);
   });
+
+  it('reports nothing off the path for linear history', async () => {
+    const { dir, shas } = await makeRepo(6);
+    const range = await listCandidateRange(dir, shas[0]!, 'HEAD');
+    expect(range.commits.map((c) => c.sha)).toEqual(shas);
+    expect(range.offPath).toBe(0);
+  });
 });
+
+describe('listCandidates across a merge', () => {
+  it('walks one parent chain instead of interleaving both sides', async () => {
+    const { dir, sha } = await makeMergedRepo();
+    const range = await listCandidateRange(dir, sha.G, sha.B1);
+
+    // main's own commits and the merge; F1 and F2 are represented by M
+    expect(range.commits.map((c) => c.subject)).toEqual(['G', 'A1', 'A2', 'Merge feature', 'B1']);
+    expect(range.commits.map((c) => c.index)).toEqual([0, 1, 2, 3, 4]);
+    expect(range.offPath).toBe(2);
+
+    // every commit is a parent of the next, which is what makes halving sound
+    for (let i = 1; i < range.commits.length; i++) {
+      expect(await parentsOf(dir, range.commits[i]!.sha)).toContain(range.commits[i - 1]!.sha);
+    }
+  });
+
+  it('finds a regression introduced on main before the branch was merged', async () => {
+    const { dir, sha } = await makeMergedRepo();
+    const commits = await listCandidates(dir, sha.G, sha.B1);
+    // A1 broke it: everything that contains A1 is bad. F2 does not contain it,
+    // which is what used to send the search past A1 to blame A2.
+    const culprit = await bisectWith(commits, (c) => isAncestor(dir, sha.A1, c));
+    expect(culprit).toEqual({ goodSha: sha.G, badSha: sha.A1 });
+  });
+
+  it('pins a regression from the merged branch on the merge that brought it in', async () => {
+    const { dir, sha } = await makeMergedRepo();
+    const commits = await listCandidates(dir, sha.G, sha.B1);
+    const culprit = await bisectWith(commits, (c) => isAncestor(dir, sha.F1, c));
+    expect(culprit).toEqual({ goodSha: sha.A2, badSha: sha.M });
+  });
+
+  it('follows the merged side when only that side leads back to good', async () => {
+    const { dir, sha } = await makeMergedRepo();
+    const range = await listCandidateRange(dir, sha.F1, sha.B1);
+    expect(range.commits.map((c) => c.subject)).toEqual(['F1', 'F2', 'Merge feature', 'B1']);
+    expect(range.offPath).toBe(0);
+  });
+
+  it('diffs a merge against its first parent', async () => {
+    const { dir, sha } = await makeMergedRepo();
+    const diff = await showDiff(dir, sha.M);
+    // the clean merge's combined diff is empty; the first-parent one is not
+    expect(diff).toContain('diff --git a/feature.txt b/feature.txt');
+    expect(diff).not.toContain('main.txt');
+    expect(await parentsOf(dir, sha.M)).toEqual([sha.A2, sha.F2]);
+    expect(await mergeBase(dir, sha.A2, sha.F2)).toBe(sha.G);
+  });
+});
+
+/**
+ *   G ─ A1 ─ A2 ─ M ─ B1      main
+ *    \           /
+ *     F1 ───── F2             feature
+ *
+ * Commit dates interleave the two sides (G, F1, A1, F2, A2, M, B1), which is
+ * the order `rev-list` sorts them in.
+ */
+async function makeMergedRepo(): Promise<{ dir: string; sha: Record<string, string> }> {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'mobile-bisect-merge-'));
+  tmpdirs.push(dir);
+  let clock = 1_700_000_000;
+  const at = async (args: string[]): Promise<string> => {
+    clock += 60;
+    const stamp = `${clock} +0000`;
+    const { stdout } = await exec('git', args, {
+      cwd: dir,
+      env: { ...process.env, GIT_AUTHOR_DATE: stamp, GIT_COMMITTER_DATE: stamp },
+    });
+    return stdout;
+  };
+  const commit = async (file: string, subject: string): Promise<string> => {
+    await fs.writeFile(path.join(dir, file), `${subject}\n`, 'utf8');
+    await git(dir, ['add', '-A']);
+    await at(['commit', '--quiet', '-m', subject]);
+    return (await git(dir, ['rev-parse', 'HEAD'])).trim();
+  };
+
+  await git(dir, ['init', '--quiet']);
+  await git(dir, ['symbolic-ref', 'HEAD', 'refs/heads/main']);
+  await git(dir, ['config', 'user.email', 'test@example.com']);
+  await git(dir, ['config', 'user.name', 'Test Author']);
+  await git(dir, ['config', 'commit.gpgsign', 'false']);
+
+  const sha: Record<string, string> = {};
+  sha.G = await commit('base.txt', 'G');
+  await git(dir, ['checkout', '--quiet', '-b', 'feature']);
+  sha.F1 = await commit('feature.txt', 'F1');
+  await git(dir, ['checkout', '--quiet', 'main']);
+  sha.A1 = await commit('main.txt', 'A1');
+  await git(dir, ['checkout', '--quiet', 'feature']);
+  sha.F2 = await commit('feature.txt', 'F2');
+  await git(dir, ['checkout', '--quiet', 'main']);
+  sha.A2 = await commit('main.txt', 'A2');
+  await at(['merge', '--quiet', '--no-ff', '--no-edit', '-m', 'Merge feature', 'feature']);
+  sha.M = (await git(dir, ['rev-parse', 'HEAD'])).trim();
+  sha.B1 = await commit('after.txt', 'B1');
+  return { dir, sha };
+}
+
+async function isAncestor(dir: string, ancestor: string, commit: string): Promise<boolean> {
+  try {
+    await git(dir, ['merge-base', '--is-ancestor', ancestor, commit]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Runs the real Bisector over `commits`, judging each candidate with `isBad`. */
+async function bisectWith(
+  commits: CommitSummary[],
+  isBad: (sha: string) => Promise<boolean>,
+): Promise<{ goodSha: string; badSha: string } | undefined> {
+  const bisector = new Bisector({
+    commits,
+    meta: {
+      runId: 'merge-test',
+      command: 'test',
+      flowName: 'test',
+      goodRef: commits[0]!.sha,
+      badRef: commits[commits.length - 1]!.sha,
+      expect: 'it works',
+      totalCommits: commits.length,
+      plannedRounds: 3,
+    },
+    emit: () => {},
+  });
+  for (;;) {
+    const c = bisector.nextCandidate();
+    if (!c) break;
+    const state = (await isBad(c.sha)) ? 'bad' : 'good';
+    bisector.record({ sha: c.sha, subject: c.subject, author: c.author, state });
+  }
+  return bisector.culprit;
+}
 
 describe('assertCleanWorktree', () => {
   it('passes on a clean tree and ignores untracked files', async () => {
