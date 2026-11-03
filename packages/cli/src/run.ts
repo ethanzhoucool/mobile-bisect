@@ -541,6 +541,11 @@ class BisectRun {
   private readonly speculative = new Map<string, Promise<CommitResult>>();
   private sessionLock: Promise<void> = Promise.resolve();
   private aborted = false;
+  /**
+   * Handed to every `prepare`. Native builds run in their own process group,
+   * so the SIGINT a terminal sends never reaches them; this is how Ctrl-C does.
+   */
+  private readonly interrupt = new AbortController();
   private closing = false;
   /** Only used when the search resolves before the loop can run (2 commits). */
   private injectedDiagnosis?: string;
@@ -671,6 +676,7 @@ class BisectRun {
       candidate = await this.adapter.prepare(commit.sha, worktree.path, {
         platform: this.sidecar.platform,
         onLog: (line) => this.ui.note(pc.dim(`  ${line}`)),
+        signal: this.interrupt.signal,
       });
 
       session = await this.openSession(commit.sha);
@@ -985,6 +991,9 @@ class BisectRun {
       if (hard) process.exit(130);
       hard = true;
       this.aborted = true;
+      // Before anything else: a build left running would keep compiling into
+      // a worktree the cleanup is about to delete, after this process exits.
+      this.interrupt.abort();
       void this.abort();
     };
     process.on('SIGINT', onSignal);
