@@ -24,6 +24,16 @@ async function scriptFile(source: string): Promise<string> {
   return file;
 }
 
+/** Polls `check` until it holds or `timeoutMs` passes; says which, instead of hanging. */
+async function until(check: () => boolean, timeoutMs = 10_000): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (!check()) {
+    if (Date.now() > deadline) return false;
+    await new Promise((r) => setTimeout(r, 25));
+  }
+  return true;
+}
+
 /** ps, not `kill -0`: the point is to prove the OS no longer lists the pid. */
 export function psAlive(pid: number): boolean {
   const res = spawnSync('ps', ['-p', String(pid), '-o', 'pid='], { encoding: 'utf8' });
@@ -94,17 +104,31 @@ describe('ManagedProcess', () => {
     expect(proc.hasExited).toBe(true);
   }, 30_000);
 
-  it('captures output for diagnostics', async () => {
+  // stdout and stderr are separate pipes, so the order they are read in is not
+  // the order they were written in. A stderr line read before the last stdout
+  // chunk is pushed out of a 10-line tail by the stdout lines behind it, so
+  // each test waits on a marker from the one stream it writes.
+  it('keeps only the last lines of output for diagnostics', async () => {
     const file = await scriptFile(`
       for (let i = 0; i < 200; i++) console.log('line ' + i);
+      setInterval(() => {}, 1e9);
+    `);
+    const proc = spawnGroup(process.execPath, [file], { keepLines: 10 });
+    expect(await until(() => proc.tail().includes('line 199'))).toBe(true);
+    const tail = proc.tail(10);
+    expect(tail.split('\n')).toHaveLength(10);
+    expect(tail).toContain('line 190');
+    expect(tail).not.toContain('line 189');
+    await proc.stop(500);
+  }, 30_000);
+
+  it('captures stderr as well as stdout', async () => {
+    const file = await scriptFile(`
       console.error('boom');
       setInterval(() => {}, 1e9);
     `);
     const proc = spawnGroup(process.execPath, [file], { keepLines: 10 });
-    while (!proc.tail().includes('boom')) await new Promise((r) => setTimeout(r, 25));
-    const tail = proc.tail(10);
-    expect(tail.split('\n').length).toBeLessThanOrEqual(10);
-    expect(tail).toContain('line 199');
+    expect(await until(() => proc.tail().includes('boom'))).toBe(true);
     await proc.stop(500);
   }, 30_000);
 });
